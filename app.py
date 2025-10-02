@@ -1,3 +1,4 @@
+from venv import logger
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -17,6 +18,16 @@ from reportlab.lib.utils import ImageReader
 from flask import send_file
 import qrcode
 import io
+
+# Add this at the top of app.py after imports
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.utils import ImageReader
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+    print("ReportLab not available - PDF features disabled")
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -264,12 +275,19 @@ def register():
         password = request.form.get('password')
         otp = request.form.get('otp')
         
+        # Clean phone number for checking
+        phone_digits = ''.join(filter(str.isdigit, phone))
+        if phone_digits.startswith('91') and len(phone_digits) == 12:
+            phone_digits = phone_digits[2:]
+        elif len(phone_digits) > 10:
+            phone_digits = phone_digits[-10:]
+        
         # Check if user already exists
         if User.query.filter_by(email=email).first():
             flash('Email already registered!', 'danger')
             return render_template('auth/register.html', email=email, phone=phone)
         
-        if User.query.filter_by(phone=phone).first():
+        if User.query.filter_by(phone=phone_digits).first():
             flash('Phone number already registered!', 'danger')
             return render_template('auth/register.html', email=email, phone=phone)
         
@@ -297,7 +315,7 @@ def register():
             if otp_record and otp_record.otp == otp and datetime.utcnow() < otp_record.expires_at:
                 # OTP verified, create user
                 hashed_password = generate_password_hash(password)
-                user = User(email=email, phone=phone, password=hashed_password)
+                user = User(email=email, phone=phone_digits, password=hashed_password)  # Store cleaned phone
                 db.session.add(user)
                 otp_record.verified = True
                 db.session.commit()
@@ -322,56 +340,280 @@ def register():
 
 @app.route('/send_register_otp', methods=['POST'])
 def send_register_otp():
-    email = request.json.get('email')
-    phone = request.json.get('phone')
-    
-    if not email or not phone:
-        return jsonify({'success': False, 'message': 'Email and phone are required!'})
-    
-    # Check if user already exists
-    if User.query.filter_by(email=email).first():
-        return jsonify({'success': False, 'message': 'Email already registered!'})
-    
-    if User.query.filter_by(phone=phone).first():
-        return jsonify({'success': False, 'message': 'Phone number already registered!'})
-    
-    # Generate and send OTP
-    otp = generate_otp()
-    expires_at = datetime.utcnow() + timedelta(minutes=10)
-    
-    # Mark any existing OTPs as expired for this email/purpose
-    existing_otps = OTPVerification.query.filter_by(
-        email=email, 
-        purpose='register',
-        verified=False
-    ).all()
-    
-    for existing_otp in existing_otps:
-        existing_otp.expires_at = datetime.utcnow()  # Expire immediately
-    
-    # Save new OTP to database
-    otp_record = OTPVerification(
-        email=email,
-        phone=phone,
-        otp=otp,
-        purpose='register',
-        expires_at=expires_at
-    )
-    db.session.add(otp_record)
-    db.session.commit()
-    
-    # Send SMS OTP
-    sms_sent = send_sms_otp(phone, otp)
-    
-    # Send Email OTP
-    email_sent = send_email_otp(email, otp, 'registration')
-    
-    if sms_sent or email_sent:
+    try:
+        print("🟡 OTP request received")
+        
+        # Check if request contains JSON data
+        if not request.is_json:
+            print("❌ Request is not JSON")
+            return jsonify({'success': False, 'message': 'Invalid request format'})
+        
+        data = request.get_json()
+        print(f"📦 Request data: {data}")
+            
+        email = data.get('email', '').strip().lower()
+        phone = data.get('phone', '').strip()
+        
+        print(f"📧 Email: {email}")
+        print(f"📱 Original phone: {phone}")
+        
+        if not email or not phone:
+            print("❌ Missing email or phone")
+            return jsonify({'success': False, 'message': 'Email and phone are required!'})
+        
+        # Validate email format
+        if '@' not in email or '.' not in email:
+            return jsonify({'success': False, 'message': 'Invalid email format!'})
+        
+        # Improved phone validation - handle various formats
+        phone_digits = ''.join(filter(str.isdigit, phone))
+
+        # Remove country code if present
+        if phone_digits.startswith('91') and len(phone_digits) == 12:
+            phone_digits = phone_digits[2:]  # Remove '91' prefix
+        elif phone_digits.startswith('91') and len(phone_digits) > 12:
+            phone_digits = phone_digits[2:12]  # Take next 10 digits after '91'
+        elif len(phone_digits) > 10:
+            phone_digits = phone_digits[-10:]  # Take last 10 digits
+
+        print(f"📱 Phone digits after cleaning: {phone_digits}")
+
+        if len(phone_digits) != 10:
+            return jsonify({
+                'success': False, 
+                'message': 'Invalid phone number! Please use a 10-digit Indian number (with or without +91). Example: 7019670262 or +917019670262'
+            })
+
+        # Format phone for display and storage
+        formatted_phone = f"+91{phone_digits}"
+        phone_for_storage = phone_digits  # Store without +91 in database
+        
+        print(f"📱 Formatted phone: {formatted_phone}")
+        print(f"📱 Phone for storage: {phone_for_storage}")
+        
+        # Check if user already exists
+        existing_user_email = User.query.filter_by(email=email).first()
+        existing_user_phone = User.query.filter_by(phone=phone_for_storage).first()
+        
+        if existing_user_email:
+            print(f"❌ Email already exists: {email}")
+            return jsonify({'success': False, 'message': 'Email already registered!'})
+        
+        if existing_user_phone:
+            print(f"❌ Phone already exists: {phone_for_storage}")
+            return jsonify({'success': False, 'message': 'Phone number already registered!'})
+        
+        # Generate OTP
+        otp = generate_otp()
+        expires_at = datetime.utcnow() + timedelta(minutes=10)
+        print(f"🔐 Generated OTP: {otp}")
+        
+        # Save OTP to database
+        try:
+            # Expire any existing OTPs
+            existing_otps = OTPVerification.query.filter_by(
+                email=email, 
+                purpose='register',
+                verified=False
+            ).all()
+            
+            for existing_otp in existing_otps:
+                existing_otp.expires_at = datetime.utcnow()
+            
+            # Create new OTP record
+            otp_record = OTPVerification(
+                email=email,
+                phone=phone_for_storage,  # Store without +91
+                otp=otp,
+                purpose='register',
+                expires_at=expires_at
+            )
+            db.session.add(otp_record)
+            db.session.commit()
+            print("✅ OTP saved to database")
+            
+        except Exception as db_error:
+            print(f"❌ Database error: {str(db_error)}")
+            db.session.rollback()
+            return jsonify({'success': False, 'message': 'Database error. Please try again.'})
+        
+        # Send OTP via SMS and Email
+        print("🟡 Attempting to send OTP...")
+        
+        sms_sent = False
+        email_sent = False
+        
+        try:
+            # Use the formatted phone with +91 for SMS
+            sms_sent = send_sms_otp(formatted_phone, otp)
+            print(f"📱 SMS sent: {sms_sent}")
+        except Exception as sms_error:
+            print(f"❌ SMS error: {str(sms_error)}")
+        
+        try:
+            email_sent = send_email_otp(email, otp, 'registration')
+            print(f"📧 Email sent: {email_sent}")
+        except Exception as email_error:
+            print(f"❌ Email error: {str(email_error)}")
+        
+        # Set session variables
         session['register_otp_sent'] = True
         session['register_email'] = email
-        return jsonify({'success': True, 'message': 'OTP sent successfully!'})
-    else:
-        return jsonify({'success': False, 'message': 'Failed to send OTP. Please try again.'})
+        session['register_phone'] = phone_for_storage  # Store without +91
+        
+        # Return appropriate response
+        if sms_sent and email_sent:
+            message = 'OTP sent to your mobile and email!'
+        elif sms_sent:
+            message = 'OTP sent to your mobile number!'
+        elif email_sent:
+            message = 'OTP sent to your email!'
+        else:
+            message = f'OTP: {otp} (Check terminal for testing)'
+        
+        print(f"✅ OTP process completed: {message}")
+        
+        return jsonify({
+            'success': True, 
+            'message': message,
+            'debug_otp': otp  # Remove in production
+        })
+            
+    except Exception as e:
+        print(f"❌ CRITICAL ERROR in send_register_otp: {str(e)}")
+        import traceback
+        traceback.print_exc()  # This will show the full stack trace
+        
+        return jsonify({
+            'success': False, 
+            'message': 'Server error. Please try again.'
+        })
+    
+@app.route('/debug/check-db')
+def debug_check_db():
+    """Check database connection"""
+    try:
+        user_count = User.query.count()
+        otp_count = OTPVerification.query.count()
+        return jsonify({
+            'success': True,
+            'user_count': user_count,
+            'otp_count': otp_count,
+            'database': 'Connected'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/debug/session')
+def debug_session():
+    """Check session data"""
+    return jsonify(dict(session))
+
+@app.route('/debug/test-otp-flow')
+def debug_test_otp_flow():
+    """Test complete OTP flow"""
+    test_email = "test@example.com"
+    test_phone = "9876543210"
+    otp = generate_otp()
+    
+    print(f"🧪 Testing OTP flow:")
+    print(f"📧 Email: {test_email}")
+    print(f"📱 Phone: {test_phone}") 
+    print(f"🔐 OTP: {otp}")
+    
+    # Test SMS
+    sms_result = send_sms_otp(test_phone, otp)
+    
+    # Test Email
+    email_result = send_email_otp(test_email, otp)
+    
+    return jsonify({
+        'sms_result': sms_result,
+        'email_result': email_result,
+        'otp': otp,
+        'message': 'Check terminal for details'
+    })
+
+@app.route('/debug/clear-session')
+def debug_clear_session():
+    """Clear session data"""
+    session.clear()
+    return jsonify({'success': True, 'message': 'Session cleared'})
+
+@app.route('/debug/users')
+def debug_users():
+    """List all users"""
+    users = User.query.all()
+    user_list = []
+    for user in users:
+        user_list.append({
+            'id': user.id,
+            'email': user.email,
+            'phone': user.phone,
+            'created_at': user.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        })
+    return jsonify({'users': user_list})
+    
+@app.route('/debug/send_test_email')
+def debug_send_test_email():
+    """Debug route to test email sending"""
+    try:
+        test_email = "your-test-email@gmail.com"  # Change this
+        otp = generate_otp()
+        success = send_email_otp(test_email, otp, 'registration')
+        return jsonify({'success': success, 'otp': otp, 'email': test_email})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/debug/send_test_sms')
+def debug_send_test_sms():
+    """Debug route to test SMS sending"""
+    try:
+        test_phone = "+91XXXXXXXXXX"  # Change this
+        otp = generate_otp()
+        success = send_sms_otp(test_phone, otp)
+        return jsonify({'success': success, 'otp': otp, 'phone': test_phone})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+    
+@app.route('/test-sms')
+def test_sms():
+    """Test SMS functionality"""
+    test_phone = "+919876543210"  # Replace with your test number
+    otp = generate_otp()
+    
+    print(f"🧪 Testing SMS to: {test_phone}")
+    print(f"🔐 Test OTP: {otp}")
+    
+    success = send_sms_otp(test_phone, otp)
+    
+    return jsonify({
+        'success': success,
+        'phone': test_phone,
+        'otp': otp,
+        'message': 'Check your phone for SMS' if success else 'SMS failed - check terminal'
+    })
+
+@app.route('/test-email')
+def test_email():
+    """Test Email functionality"""
+    test_email = "test@example.com"  # Replace with your test email
+    otp = generate_otp()
+    
+    print(f"🧪 Testing Email to: {test_email}")
+    print(f"🔐 Test OTP: {otp}")
+    
+    success = send_email_otp(test_email, otp, 'registration')
+    
+    return jsonify({
+        'success': success,
+        'email': test_email,
+        'otp': otp,
+        'message': 'Check your email' if success else 'Email failed - check terminal'
+    })
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -875,83 +1117,215 @@ def download_invoice(order_id):
         
         # Check if user owns the order
         if order.user_id != current_user.id:
-            return jsonify({'success': False, 'message': 'Unauthorized!'}), 403
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': 'Unauthorized!'}), 403
+            flash('Unauthorized!', 'danger')
+            return redirect(url_for('index'))
+        
+        # Check if reportlab is available
+        if not REPORTLAB_AVAILABLE:
+            logger.warning("ReportLab not available - cannot generate PDF invoice")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'success': False, 
+                    'message': 'PDF generation is currently unavailable. Please try again later.'
+                }), 503
+            
+            # Fallback: Render HTML invoice that user can print
+            return render_template('receipts/invoice_html.html', order=order)
         
         # Create PDF in memory
         buffer = io.BytesIO()
-        pdf = canvas.Canvas(buffer, pagesize=letter)
         
-        # Set up PDF content
-        pdf.setTitle(f"Invoice-{order.order_id}")
-        
-        # Header
-        pdf.setFont("Helvetica-Bold", 20)
-        pdf.drawString(100, 750, "NexaMart")
-        pdf.setFont("Helvetica", 12)
-        pdf.drawString(100, 730, "INVOICE")
-        
-        # Order Information
-        pdf.setFont("Helvetica-Bold", 12)
-        pdf.drawString(100, 700, f"Order ID: {order.order_id}")
-        pdf.setFont("Helvetica", 10)
-        pdf.drawString(100, 685, f"Order Date: {order.created_at.strftime('%B %d, %Y at %I:%M %p')}")
-        pdf.drawString(100, 670, f"Status: {order.get_status_display()}")
-        
-        # Customer Information
-        pdf.setFont("Helvetica-Bold", 12)
-        pdf.drawString(100, 640, "Bill To:")
-        pdf.setFont("Helvetica", 10)
-        y_position = 625
-        if current_user.full_name:
-            pdf.drawString(100, y_position, current_user.full_name)
-            y_position -= 15
-        pdf.drawString(100, y_position, current_user.email)
-        y_position -= 15
-        if current_user.address:
-            pdf.drawString(100, y_position, current_user.address)
-            y_position -= 15
-            pdf.drawString(100, y_position, f"{current_user.city}, {current_user.state} - {current_user.pincode}")
-        
-        # Items Table Header
-        pdf.setFont("Helvetica-Bold", 10)
-        pdf.drawString(100, 550, "Item")
-        pdf.drawString(300, 550, "Quantity")
-        pdf.drawString(400, 550, "Price")
-        pdf.drawString(500, 550, "Total")
-        
-        # Items
-        pdf.setFont("Helvetica", 10)
-        y_position = 530
-        for item in order.items:
-            product_name = item.product.name if item.product else "Product"
-            # Wrap long product names
-            if len(product_name) > 30:
-                product_name = product_name[:27] + "..."
+        try:
+            # Create PDF canvas
+            pdf = canvas.Canvas(buffer, pagesize=letter)
+            pdf.setTitle(f"Invoice-{order.order_id}")
             
-            pdf.drawString(100, y_position, product_name)
-            pdf.drawString(300, y_position, str(item.quantity))
-            pdf.drawString(400, y_position, format_currency(item.price))
-            pdf.drawString(500, y_position, format_currency(item.subtotal))
+            # Set up colors
+            primary_color = (0.255, 0.412, 0.882)  # Royal Blue #4169E1
+            secondary_color = (0.2, 0.2, 0.2)      # Dark Gray
+            light_gray = (0.9, 0.9, 0.9)           # Light Gray
+            
+            # Header Section
+            pdf.setFillColorRGB(*primary_color)
+            pdf.rect(0, 750, 612, 60, fill=1, stroke=0)  # Header background
+            
+            pdf.setFillColorRGB(1, 1, 1)  # White text
+            pdf.setFont("Helvetica-Bold", 24)
+            pdf.drawString(50, 770, "NEXAMART")
+            
+            pdf.setFont("Helvetica", 14)
+            pdf.drawString(50, 745, "INVOICE")
+            
+            # Company Info
+            pdf.setFillColorRGB(*secondary_color)
+            pdf.setFont("Helvetica", 8)
+            pdf.drawString(400, 770, "NexaMart Online Store")
+            pdf.drawString(400, 760, "support@nexamart.com")
+            pdf.drawString(400, 750, "+91 9876543210")
+            
+            # Order Information
+            y_position = 700
+            pdf.setFillColorRGB(*secondary_color)
+            pdf.setFont("Helvetica-Bold", 12)
+            pdf.drawString(50, y_position, "ORDER INFORMATION")
+            
             y_position -= 20
+            pdf.setFont("Helvetica", 10)
+            pdf.drawString(50, y_position, f"Order ID: {order.order_id}")
+            pdf.drawString(300, y_position, f"Order Date: {order.created_at.strftime('%B %d, %Y')}")
             
-            # Add new page if running out of space
-            if y_position < 100:
+            y_position -= 15
+            pdf.drawString(50, y_position, f"Status: {order.get_status_display()}")
+            pdf.drawString(300, y_position, f"Payment: {order.payment_method.upper()}")
+            
+            # Customer Information
+            y_position -= 30
+            pdf.setFont("Helvetica-Bold", 12)
+            pdf.drawString(50, y_position, "BILL TO")
+            
+            y_position -= 15
+            pdf.setFont("Helvetica", 10)
+            if current_user.full_name:
+                pdf.drawString(50, y_position, current_user.full_name)
+                y_position -= 15
+            pdf.drawString(50, y_position, current_user.email)
+            y_position -= 15
+            if current_user.phone:
+                pdf.drawString(50, y_position, current_user.phone)
+                y_position -= 15
+            if current_user.address:
+                # Handle multi-line address
+                address_lines = current_user.address.split('\n')
+                for line in address_lines[:2]:  # Limit to 2 lines
+                    if y_position < 100:
+                        pdf.showPage()
+                        y_position = 750
+                    pdf.drawString(50, y_position, line)
+                    y_position -= 15
+                
+                city_state = f"{current_user.city}, {current_user.state} - {current_user.pincode}"
+                if y_position < 100:
+                    pdf.showPage()
+                    y_position = 750
+                pdf.drawString(50, y_position, city_state)
+                y_position -= 30
+            
+            # Items Table Header
+            if y_position < 150:
                 pdf.showPage()
                 y_position = 750
-                pdf.setFont("Helvetica", 10)
-        
-        # Totals
-        pdf.setFont("Helvetica-Bold", 12)
-        pdf.drawString(400, y_position - 40, f"Total: {format_currency(order.total_amount)}")
-        pdf.drawString(400, y_position - 60, f"Payment Method: {order.payment_method.upper()}")
-        pdf.drawString(400, y_position - 80, f"Payment Status: {order.payment_status.upper()}")
-        
-        # Footer
-        pdf.setFont("Helvetica-Oblique", 8)
-        pdf.drawString(100, 50, "Thank you for shopping with NexaMart!")
-        pdf.drawString(100, 40, "For any queries, contact: support@nexamart.com")
-        
-        pdf.save()
+            
+            pdf.setFillColorRGB(*light_gray)
+            pdf.rect(50, y_position-20, 512, 20, fill=1, stroke=0)
+            
+            pdf.setFillColorRGB(*secondary_color)
+            pdf.setFont("Helvetica-Bold", 10)
+            pdf.drawString(60, y_position-5, "PRODUCT")
+            pdf.drawString(350, y_position-5, "QTY")
+            pdf.drawString(400, y_position-5, "PRICE")
+            pdf.drawString(480, y_position-5, "TOTAL")
+            
+            # Draw line under header
+            pdf.setStrokeColorRGB(*secondary_color)
+            pdf.line(50, y_position-25, 562, y_position-25)
+            
+            y_position -= 35
+            
+            # Items List
+            pdf.setFont("Helvetica", 9)
+            for item in order.items:
+                if y_position < 100:
+                    pdf.showPage()
+                    y_position = 750
+                    # Redraw table header on new page
+                    pdf.setFillColorRGB(*light_gray)
+                    pdf.rect(50, y_position-20, 512, 20, fill=1, stroke=0)
+                    pdf.setFillColorRGB(*secondary_color)
+                    pdf.setFont("Helvetica-Bold", 10)
+                    pdf.drawString(60, y_position-5, "PRODUCT")
+                    pdf.drawString(350, y_position-5, "QTY")
+                    pdf.drawString(400, y_position-5, "PRICE")
+                    pdf.drawString(480, y_position-5, "TOTAL")
+                    pdf.setStrokeColorRGB(*secondary_color)
+                    pdf.line(50, y_position-25, 562, y_position-25)
+                    y_position -= 35
+                
+                # Product name (truncate if too long)
+                product_name = item.product_name or "Product"
+                if len(product_name) > 40:
+                    product_name = product_name[:37] + "..."
+                
+                pdf.setFillColorRGB(*secondary_color)
+                pdf.drawString(60, y_position, product_name)
+                pdf.drawString(350, y_position, str(item.quantity))
+                pdf.drawString(400, y_position, format_currency(item.price))
+                pdf.drawString(480, y_position, format_currency(item.subtotal))
+                
+                y_position -= 20
+            
+            # Totals Section
+            if y_position < 150:
+                pdf.showPage()
+                y_position = 750
+            
+            y_position -= 30
+            pdf.setStrokeColorRGB(*secondary_color)
+            pdf.line(350, y_position, 562, y_position)
+            y_position -= 20
+            
+            pdf.setFont("Helvetica", 10)
+            pdf.drawString(400, y_position, "Subtotal:")
+            pdf.drawString(480, y_position, format_currency(order.get_subtotal()))
+            
+            y_position -= 15
+            pdf.drawString(400, y_position, "Shipping:")
+            pdf.drawString(480, y_position, format_currency(order.shipping_cost))
+            
+            y_position -= 15
+            pdf.drawString(400, y_position, "Tax:")
+            pdf.drawString(480, y_position, format_currency(order.total_amount - order.get_subtotal() - order.shipping_cost))
+            
+            y_position -= 15
+            pdf.setFont("Helvetica-Bold", 11)
+            pdf.drawString(400, y_position, "Grand Total:")
+            pdf.drawString(480, y_position, format_currency(order.total_amount))
+            
+            # Payment Information
+            y_position -= 40
+            pdf.setFont("Helvetica-Bold", 10)
+            pdf.drawString(50, y_position, "PAYMENT INFORMATION")
+            
+            y_position -= 15
+            pdf.setFont("Helvetica", 9)
+            pdf.drawString(50, y_position, f"Method: {order.payment_method.upper()}")
+            pdf.drawString(200, y_position, f"Status: {order.payment_status.upper()}")
+            
+            if order.payment_status == 'completed':
+                pdf.drawString(350, y_position, f"Paid on: {order.created_at.strftime('%b %d, %Y')}")
+            
+            # Footer
+            y_position -= 50
+            pdf.setFont("Helvetica-Oblique", 8)
+            pdf.setFillColorRGB(0.5, 0.5, 0.5)
+            pdf.drawString(50, y_position, "Thank you for shopping with NexaMart!")
+            pdf.drawString(50, y_position-10, "For any queries, contact: support@nexamart.com")
+            pdf.drawString(50, y_position-20, "This is a computer-generated invoice.")
+            
+            # Save PDF
+            pdf.save()
+            
+        except Exception as pdf_error:
+            logger.error(f"PDF generation error: {str(pdf_error)}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'success': False, 
+                    'message': 'Error generating PDF invoice'
+                }), 500
+            
+            # Fallback to HTML invoice
+            return render_template('receipts/invoice_html.html', order=order)
         
         # Get PDF data from buffer
         buffer.seek(0)
@@ -961,15 +1335,21 @@ def download_invoice(order_id):
         # Create response
         response = make_response(pdf_data)
         response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = f'attachment; filename=invoice-{order.order_id}.pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=nexamart-invoice-{order.order_id}.pdf'
         
+        logger.info(f"Invoice PDF generated successfully for order {order.order_id}")
         return response
         
     except Exception as e:
-        print(f"Error generating invoice: {str(e)}")
+        logger.error(f"Error in download_invoice route: {str(e)}")
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'message': 'Error generating invoice'}), 500
-        flash('Error generating invoice', 'danger')
+            return jsonify({
+                'success': False, 
+                'message': 'An error occurred while generating the invoice'
+            }), 500
+        
+        flash('Error generating invoice. Please try again.', 'danger')
         return redirect(url_for('orders'))
 
 @app.route('/api/generate-qr/<int:order_id>')

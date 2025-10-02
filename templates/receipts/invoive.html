@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice - {{ order.order_id }}</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .invoice-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: linear-gradient(135deg, #4169e1, #6c8eff);
+        color: white;
+        padding: 20px;
+        border-radius: 10px 10px 0 0;
+        margin: -30px -30px 30px -30px;
+      }
+      .company-info {
+        text-align: right;
+        font-size: 12px;
+      }
+      .section {
+        margin-bottom: 30px;
+      }
+      .section-title {
+        color: #4169e1;
+        border-bottom: 2px solid #4169e1;
+        padding-bottom: 5px;
+        margin-bottom: 15px;
+      }
+      .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+      }
+      .items-table th {
+        background-color: #f8f9fa;
+        padding: 12px;
+        text-align: left;
+        border-bottom: 2px solid #dee2e6;
+      }
+      .items-table td {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+      }
+      .totals {
+        text-align: right;
+        margin-top: 20px;
+      }
+      .total-row {
+        margin: 5px 0;
+      }
+      .grand-total {
+        font-size: 18px;
+        font-weight: bold;
+        color: #4169e1;
+        border-top: 2px solid #4169e1;
+        padding-top: 10px;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #dee2e6;
+        color: #6c757d;
+        font-size: 12px;
+      }
+      @media print {
+        body {
+          background: white;
+        }
+        .invoice-container {
+          box-shadow: none;
+        }
+        .no-print {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="invoice-container">
+      <div class="header">
+        <div
+          style="display: flex; justify-content: between; align-items: center"
+        >
+          <div>
+            <h1 style="margin: 0; font-size: 28px">NEXAMART</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9">INVOICE</p>
+          </div>
+          <div class="company-info">
+            <div>NexaMart Online Store</div>
+            <div>support@nexamart.com</div>
+            <div>+91 9876543210</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3 class="section-title">Order Information</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px">
+          <div>
+            <strong>Order ID:</strong> {{ order.order_id }}<br />
+            <strong>Status:</strong> {{ order.get_status_display() }}<br />
+            <strong>Order Date:</strong> {{ order.created_at.strftime('%B %d, %Y
+            at %I:%M %p') }}
+          </div>
+          <div>
+            <strong>Payment Method:</strong> {{ order.payment_method.upper()
+            }}<br />
+            <strong>Payment Status:</strong> {{ order.payment_status.upper()
+            }}<br />
+            {% if order.tracking_number %}
+            <strong>Tracking:</strong> {{ order.tracking_number }} {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3 class="section-title">Bill To</h3>
+        <div>
+          {% if current_user.full_name %}<strong
+            >{{ current_user.full_name }}</strong
+          ><br />{% endif %} {{ current_user.email }}<br />
+          {% if current_user.phone %}{{ current_user.phone }}<br />{% endif %}
+          {% if current_user.address %} {{ current_user.address }}<br />
+          {{ current_user.city }}, {{ current_user.state }} - {{
+          current_user.pincode }} {% endif %}
+        </div>
+      </div>
+
+      <div class="section">
+        <h3 class="section-title">Order Items</h3>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in order.items %}
+            <tr>
+              <td>{{ item.product_name }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>{{ format_currency(item.price) }}</td>
+              <td>{{ format_currency(item.subtotal) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="totals">
+        <div class="total-row">
+          <strong>Subtotal:</strong> {{ format_currency(order.get_subtotal()) }}
+        </div>
+        <div class="total-row">
+          <strong>Shipping:</strong> {{ format_currency(order.shipping_cost) }}
+        </div>
+        <div class="total-row">
+          <strong>Tax:</strong> {{ format_currency(order.total_amount -
+          order.get_subtotal() - order.shipping_cost) }}
+        </div>
+        <div class="total-row grand-total">
+          <strong>Grand Total:</strong> {{ format_currency(order.total_amount)
+          }}
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>Thank you for shopping with NexaMart!</p>
+        <p>For any queries, contact: support@nexamart.com</p>
+        <p>This is a computer-generated invoice.</p>
+        <div class="no-print">
+          <button
+            onclick="window.print()"
+            style="
+              background: #4169e1;
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 5px;
+              cursor: pointer;
+              margin-top: 10px;
+            "
+          >
+            Print Invoice
+          </button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -7,9 +7,9 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Twilio Configuration
-    TWILIO_ACCOUNT_SID = 'AC24f9c5128dc393b2721b151fb1cef6c4'
-    TWILIO_AUTH_TOKEN = '6a221d0e4c581f802afc1e1d845a3ed4'
-    TWILIO_PHONE_NUMBER = '+12075063134'
+    TWILIO_ACCOUNT_SID = 'AC98dceb0cce1b4603299ca4de69840f26'
+    TWILIO_AUTH_TOKEN = '3839daa01411e1a5cff78169233fb8b4'
+    TWILIO_PHONE_NUMBER = '++13134257867'
     
     # Email Configuration
     MAIL_SERVER = 'smtp.gmail.com'

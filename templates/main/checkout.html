@@ -1,0 +1,916 @@
+{% extends "main/base.html" %} {% block title %}Checkout{% endblock %} {% block
+content %}
+<div class="container py-5">
+  <!-- Progress Bar -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="progress-steps">
+        <div class="step completed">
+          <div class="step-number">1</div>
+          <div class="step-label">Cart</div>
+        </div>
+        <div class="step completed">
+          <div class="step-number">2</div>
+          <div class="step-label">Address</div>
+        </div>
+        <div class="step active">
+          <div class="step-number">3</div>
+          <div class="step-label">Payment</div>
+        </div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <div class="step-label">Confirmation</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h1 class="mb-4">Checkout</h1>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <!-- Shipping Address with Address Book -->
+      <div class="card mb-4">
+        <div
+          class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
+        >
+          <h5 class="mb-0">
+            <i class="fas fa-shipping-fast me-2"></i>Shipping Address
+          </h5>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-light"
+            data-bs-toggle="modal"
+            data-bs-target="#addressBookModal"
+          >
+            <i class="fas fa-address-book me-1"></i>Address Book
+          </button>
+        </div>
+        <div class="card-body">
+          {% if current_user.full_name and current_user.address %}
+          <div class="mb-3">
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="selected_address"
+                id="address1"
+                checked
+              />
+              <label class="form-check-label" for="address1">
+                <strong>{{ current_user.full_name }}</strong><br />
+                {{ current_user.address }}<br />
+                {{ current_user.city }}, {{ current_user.state }} - {{
+                current_user.pincode }}
+              </label>
+            </div>
+          </div>
+
+          <!-- Additional Saved Addresses (Example) -->
+          <div class="mb-3">
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="selected_address"
+                id="address2"
+              />
+              <label class="form-check-label" for="address2">
+                <strong>Office Address</strong><br />
+                123 Business Park, Sector 5<br />
+                Gurugram, Haryana - 122001
+              </label>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <a
+              href="{{ url_for('profile') }}"
+              class="btn btn-outline-primary btn-sm"
+            >
+              <i class="fas fa-edit me-1"></i>Update Address
+            </a>
+            <button
+              type="button"
+              class="btn btn-outline-secondary btn-sm"
+              data-bs-toggle="modal"
+              data-bs-target="#newAddressModal"
+            >
+              <i class="fas fa-plus me-1"></i>Add New Address
+            </button>
+          </div>
+          {% else %}
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Please complete your shipping address in your profile.
+          </div>
+          <a href="{{ url_for('profile') }}" class="btn btn-primary">
+            <i class="fas fa-user-edit me-2"></i>Complete Profile
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Gift Options -->
+      <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-gift me-2"></i>Gift Options</h5>
+        </div>
+        <div class="card-body">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="giftWrap" />
+            <label class="form-check-label" for="giftWrap">
+              Add gift wrap for ₹50
+            </label>
+          </div>
+          <div class="mb-3">
+            <label for="giftMessage" class="form-label"
+              >Gift Message (Optional)</label
+            >
+            <textarea
+              class="form-control"
+              id="giftMessage"
+              rows="3"
+              placeholder="Add a personal message"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Method -->
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-credit-card me-2"></i>Payment Method
+          </h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" id="payment-form">
+            <!-- Credit/Debit Card -->
+            <div class="form-check mb-3">
+              <input
+                class="form-check-input payment-method"
+                type="radio"
+                name="payment_method"
+                id="card"
+                value="card"
+                checked
+              />
+              <label class="form-check-label" for="card">
+                <i class="fas fa-credit-card me-2"></i>Credit/Debit Card
+              </label>
+            </div>
+
+            <!-- Card Payment Details -->
+            <div id="card-details" class="payment-details">
+              <div class="row mb-3">
+                <div class="col-12">
+                  <label for="card_number" class="form-label"
+                    >Card Number</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="card_number"
+                    name="card_number"
+                    placeholder="1234 5678 9012 3456"
+                    maxlength="19"
+                  />
+                </div>
+              </div>
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="expiry_date" class="form-label"
+                    >Expiry Date</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="expiry_date"
+                    name="expiry_date"
+                    placeholder="MM/YY"
+                    maxlength="5"
+                  />
+                </div>
+                <div class="col-md-6">
+                  <label for="cvv" class="form-label">CVV</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="cvv"
+                    name="cvv"
+                    placeholder="123"
+                    maxlength="3"
+                  />
+                </div>
+              </div>
+              <div class="row mb-3">
+                <div class="col-12">
+                  <label for="card_holder" class="form-label"
+                    >Card Holder Name</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="card_holder"
+                    name="card_holder"
+                    placeholder="John Doe"
+                  />
+                </div>
+              </div>
+
+              <!-- Mock Card Suggestions -->
+              <div class="alert alert-info">
+                <small>
+                  <strong>Test Cards:</strong><br />
+                  • Success: 4111 1111 1111 1111<br />
+                  • Failure: 4222 2222 2222 2222<br />
+                  • Pending: 4333 3333 3333 3333
+                </small>
+              </div>
+            </div>
+
+            <!-- UPI Payment -->
+            <div class="form-check mb-3">
+              <input
+                class="form-check-input payment-method"
+                type="radio"
+                name="payment_method"
+                id="upi"
+                value="upi"
+              />
+              <label class="form-check-label" for="upi">
+                <i class="fas fa-mobile-alt me-2"></i>UPI Payment
+              </label>
+            </div>
+
+            <!-- UPI Payment Details -->
+            <div id="upi-details" class="payment-details" style="display: none">
+              <div class="row mb-3">
+                <div class="col-12">
+                  <label for="upi_id" class="form-label">UPI ID</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="upi_id"
+                    name="upi_id"
+                    placeholder="yourname@upi"
+                  />
+                </div>
+              </div>
+              <div class="alert alert-info">
+                <small>
+                  <strong>Test UPI IDs:</strong><br />
+                  • Success: success@mockupi<br />
+                  • Failure: failure@mockupi<br />
+                  • Pending: pending@mockupi
+                </small>
+              </div>
+            </div>
+
+            <!-- Digital Wallets -->
+            <div class="form-check mb-3">
+              <input
+                class="form-check-input payment-method"
+                type="radio"
+                name="payment_method"
+                id="wallet"
+                value="wallet"
+              />
+              <label class="form-check-label" for="wallet">
+                <i class="fas fa-wallet me-2"></i>Digital Wallets
+              </label>
+            </div>
+
+            <!-- Wallet Payment Details -->
+            <div
+              id="wallet-details"
+              class="payment-details"
+              style="display: none"
+            >
+              <div class="row mb-3">
+                <div class="col-12">
+                  <label for="wallet_type" class="form-label"
+                    >Select Wallet</label
+                  >
+                  <select
+                    class="form-select"
+                    id="wallet_type"
+                    name="wallet_type"
+                  >
+                    <option value="">Choose a wallet</option>
+                    <option value="paytm">Paytm</option>
+                    <option value="phonepe">PhonePe</option>
+                    <option value="amazonpay">Amazon Pay</option>
+                    <option value="mobikwik">MobiKwik</option>
+                  </select>
+                </div>
+              </div>
+              <div class="alert alert-info">
+                <small>
+                  <strong>Test Wallets:</strong><br />
+                  • Use any selection for testing
+                </small>
+              </div>
+            </div>
+
+            <!-- PayPal -->
+            <div class="form-check mb-3">
+              <input
+                class="form-check-input payment-method"
+                type="radio"
+                name="payment_method"
+                id="paypal"
+                value="paypal"
+              />
+              <label class="form-check-label" for="paypal">
+                <i class="fab fa-paypal me-2"></i>PayPal
+              </label>
+            </div>
+
+            <!-- PayPal Payment Details -->
+            <div
+              id="paypal-details"
+              class="payment-details"
+              style="display: none"
+            >
+              <div class="alert alert-info">
+                <small>
+                  You will be redirected to PayPal to complete your payment.
+                </small>
+              </div>
+              <div class="alert alert-warning">
+                <small>
+                  <strong>PayPal Sandbox Testing:</strong><br />
+                  • Email: sb-1234567890@personal.example.com<br />
+                  • Password: 123456789
+                </small>
+              </div>
+            </div>
+
+            <!-- Cash on Delivery -->
+            <div class="form-check mb-3">
+              <input
+                class="form-check-input payment-method"
+                type="radio"
+                name="payment_method"
+                id="cod"
+                value="cod"
+              />
+              <label class="form-check-label" for="cod">
+                <i class="fas fa-money-bill-wave me-2"></i>Cash on Delivery
+              </label>
+            </div>
+
+            <!-- COD Message -->
+            <div id="cod-details" class="payment-details" style="display: none">
+              <div class="alert alert-warning">
+                <small>
+                  <i class="fas fa-info-circle me-1"></i>
+                  Pay when your order is delivered. Additional ₹30 cash handling
+                  fee may apply.
+                </small>
+              </div>
+            </div>
+
+            {% if current_user.full_name and current_user.address %}
+            <button
+              type="submit"
+              class="btn btn-primary btn-lg w-100"
+              id="place-order-btn"
+            >
+              <i class="fas fa-lock me-2"></i>Place Order
+            </button>
+            {% else %}
+            <button
+              type="button"
+              class="btn btn-secondary btn-lg w-100"
+              disabled
+            >
+              Complete Profile to Place Order
+            </button>
+            {% endif %}
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <!-- Order Summary -->
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Order Summary</h5>
+        </div>
+        <div class="card-body">
+          {% for item in cart_items %}
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <small class="fw-bold">{{ item.product.name }}</small>
+              <br />
+              <small class="text-muted">Qty: {{ item.quantity }}</small>
+            </div>
+            <small
+              >{{ format_currency((item.product.discounted_price or
+              item.product.price) * item.quantity) }}</small
+            >
+          </div>
+          {% endfor %}
+
+          <hr />
+
+          <!-- Coupon Code Section -->
+          <div class="mb-3">
+            <label for="couponCode" class="form-label">Coupon Code</label>
+            <div class="input-group">
+              <input
+                type="text"
+                class="form-control"
+                id="couponCode"
+                placeholder="Enter coupon code"
+              />
+              <button
+                class="btn btn-outline-primary"
+                type="button"
+                id="applyCoupon"
+              >
+                Apply
+              </button>
+            </div>
+            <div id="couponMessage" class="mt-2" style="display: none"></div>
+          </div>
+
+          <div class="d-flex justify-content-between mb-1">
+            <small>Subtotal:</small>
+            <small>{{ format_currency(subtotal) }}</small>
+          </div>
+
+          <!-- Coupon Savings (if applied) -->
+          <div
+            id="couponSavings"
+            class="d-flex justify-content-between mb-1 text-success"
+            style="display: none"
+          >
+            <small>Coupon Savings:</small>
+            <small>-₹100</small>
+          </div>
+
+          <div class="d-flex justify-content-between mb-1">
+            <small>Shipping:</small>
+            <small>{{ format_currency(shipping) }}</small>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <small>Tax (GST):</small>
+            <small>{{ format_currency(tax) }}</small>
+          </div>
+
+          <!-- Gift Wrap Fee (if selected) -->
+          <div
+            id="giftWrapFee"
+            class="d-flex justify-content-between mb-1"
+            style="display: none"
+          >
+            <small>Gift Wrap:</small>
+            <small>₹50</small>
+          </div>
+
+          <hr />
+          <div class="d-flex justify-content-between mb-3">
+            <strong>Total:</strong>
+            <strong id="finalTotal">{{ format_currency(grand_total) }}</strong>
+          </div>
+
+          <!-- Order Items List -->
+          <div class="mt-3">
+            <h6>Items in Cart ({{ cart_items|length }})</h6>
+            {% for item in cart_items %}
+            <div class="d-flex align-items-center mb-2">
+              <img
+                src="{{ item.product.image_url or '/static/images/placeholder.jpg' }}"
+                class="rounded me-2"
+                style="width: 40px; height: 40px; object-fit: cover"
+              />
+              <div class="flex-grow-1">
+                <small class="fw-bold">{{ item.product.name }}</small>
+                <br />
+                <small class="text-muted"
+                  >{{ format_currency(item.product.discounted_price or
+                  item.product.price) }} x {{ item.quantity }}</small
+                >
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Address Book Modal -->
+<div class="modal fade" id="addressBookModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Address Book</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="list-group">
+          <!-- Example Addresses -->
+          <div class="list-group-item">
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="addressBook"
+                id="addressBook1"
+                checked
+              />
+              <label class="form-check-label w-100" for="addressBook1">
+                <div class="d-flex justify-content-between">
+                  <strong>Home Address</strong>
+                  <div>
+                    <button class="btn btn-sm btn-outline-primary me-1">
+                      Edit
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                <div class="mt-1">
+                  {{ current_user.full_name }}<br />
+                  {{ current_user.address }}<br />
+                  {{ current_user.city }}, {{ current_user.state }} - {{
+                  current_user.pincode }}
+                </div>
+              </label>
+            </div>
+          </div>
+          <div class="list-group-item">
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="addressBook"
+                id="addressBook2"
+              />
+              <label class="form-check-label w-100" for="addressBook2">
+                <div class="d-flex justify-content-between">
+                  <strong>Office Address</strong>
+                  <div>
+                    <button class="btn btn-sm btn-outline-primary me-1">
+                      Edit
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                <div class="mt-1">
+                  {{ current_user.full_name }}<br />
+                  123 Business Park, Sector 5<br />
+                  Gurugram, Haryana - 122001
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+          Use Selected Address
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Address Modal -->
+<div class="modal fade" id="newAddressModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add New Address</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="newAddressForm">
+          <div class="mb-3">
+            <label for="addressLabel" class="form-label">Address Label</label>
+            <input
+              type="text"
+              class="form-control"
+              id="addressLabel"
+              placeholder="Home, Office, etc."
+            />
+          </div>
+          <div class="mb-3">
+            <label for="fullName" class="form-label">Full Name</label>
+            <input
+              type="text"
+              class="form-control"
+              id="fullName"
+              value="{{ current_user.full_name or '' }}"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="address" class="form-label">Address</label>
+            <textarea class="form-control" id="address" rows="3"></textarea>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="city" class="form-label">City</label>
+              <input
+                type="text"
+                class="form-control"
+                id="city"
+                value="{{ current_user.city or '' }}"
+              />
+            </div>
+            <div class="col-md-6">
+              <label for="state" class="form-label">State</label>
+              <input
+                type="text"
+                class="form-control"
+                id="state"
+                value="{{ current_user.state or '' }}"
+              />
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="pincode" class="form-label">Pincode</label>
+            <input
+              type="text"
+              class="form-control"
+              id="pincode"
+              value="{{ current_user.pincode or '' }}"
+            />
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="makeDefault" />
+            <label class="form-check-label" for="makeDefault">
+              Make this my default address
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary">Save Address</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Processing Modal -->
+<div
+  class="modal fade"
+  id="paymentProcessingModal"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Processing Payment</h5>
+      </div>
+      <div class="modal-body text-center">
+        <div class="spinner-border text-primary mb-3" role="status">
+          <span class="visually-hidden">Processing...</span>
+        </div>
+        <p>Please wait while we process your payment...</p>
+        <div class="progress mb-3">
+          <div
+            class="progress-bar progress-bar-striped progress-bar-animated"
+            style="width: 100%"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Payment method toggle
+    const paymentMethods = document.querySelectorAll(".payment-method");
+    const paymentDetails = document.querySelectorAll(".payment-details");
+
+    paymentMethods.forEach((method) => {
+      method.addEventListener("change", function () {
+        // Hide all payment details
+        paymentDetails.forEach((detail) => {
+          detail.style.display = "none";
+        });
+
+        // Show selected payment details
+        const selectedDetails = document.getElementById(
+          this.value + "-details"
+        );
+        if (selectedDetails) {
+          selectedDetails.style.display = "block";
+        }
+      });
+    });
+
+    // Format card number
+    const cardNumberInput = document.getElementById("card_number");
+    if (cardNumberInput) {
+      cardNumberInput.addEventListener("input", function (e) {
+        let value = e.target.value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
+        let formattedValue = "";
+
+        for (let i = 0; i < value.length; i++) {
+          if (i > 0 && i % 4 === 0) {
+            formattedValue += " ";
+          }
+          formattedValue += value[i];
+        }
+
+        e.target.value = formattedValue;
+      });
+    }
+
+    // Format expiry date
+    const expiryInput = document.getElementById("expiry_date");
+    if (expiryInput) {
+      expiryInput.addEventListener("input", function (e) {
+        let value = e.target.value.replace(/\//g, "").replace(/[^0-9]/gi, "");
+        if (value.length >= 2) {
+          value = value.substring(0, 2) + "/" + value.substring(2, 4);
+        }
+        e.target.value = value;
+      });
+    }
+
+    // Gift wrap toggle
+    const giftWrapCheckbox = document.getElementById("giftWrap");
+    const giftWrapFee = document.getElementById("giftWrapFee");
+    const finalTotal = document.getElementById("finalTotal");
+
+    if (giftWrapCheckbox && giftWrapFee && finalTotal) {
+      giftWrapCheckbox.addEventListener("change", function () {
+        if (this.checked) {
+          giftWrapFee.style.display = "flex";
+          // Update total (you would need to calculate this properly)
+          updateTotalWithGiftWrap(true);
+        } else {
+          giftWrapFee.style.display = "none";
+          updateTotalWithGiftWrap(false);
+        }
+      });
+    }
+
+    // Coupon code application
+    const applyCouponBtn = document.getElementById("applyCoupon");
+    const couponCodeInput = document.getElementById("couponCode");
+    const couponMessage = document.getElementById("couponMessage");
+    const couponSavings = document.getElementById("couponSavings");
+
+    if (applyCouponBtn && couponCodeInput && couponMessage && couponSavings) {
+      applyCouponBtn.addEventListener("click", function () {
+        const code = couponCodeInput.value.trim();
+
+        if (!code) {
+          showCouponMessage("Please enter a coupon code", "danger");
+          return;
+        }
+
+        // Simulate coupon validation
+        if (
+          code.toUpperCase() === "SAVE10" ||
+          code.toUpperCase() === "WELCOME"
+        ) {
+          showCouponMessage(
+            "Coupon applied successfully! ₹100 discount applied.",
+            "success"
+          );
+          couponSavings.style.display = "flex";
+          updateTotalWithCoupon(true);
+        } else {
+          showCouponMessage("Invalid coupon code. Please try again.", "danger");
+          couponSavings.style.display = "none";
+          updateTotalWithCoupon(false);
+        }
+      });
+    }
+
+    function showCouponMessage(message, type) {
+      couponMessage.textContent = message;
+      couponMessage.className = "mt-2 alert alert-" + type;
+      couponMessage.style.display = "block";
+    }
+
+    function updateTotalWithGiftWrap(hasGiftWrap) {
+      // This would need to be implemented with actual calculations
+      // For now, it's just a placeholder
+      console.log("Gift wrap:", hasGiftWrap);
+    }
+
+    function updateTotalWithCoupon(hasCoupon) {
+      // This would need to be implemented with actual calculations
+      // For now, it's just a placeholder
+      console.log("Coupon applied:", hasCoupon);
+    }
+
+    // Form submission with mock payment processing
+    const paymentForm = document.getElementById("payment-form");
+    if (paymentForm) {
+      paymentForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        // Show processing modal
+        const processingModal = new bootstrap.Modal(
+          document.getElementById("paymentProcessingModal")
+        );
+        processingModal.show();
+
+        // Simulate payment processing
+        setTimeout(function () {
+          processingModal.hide();
+          paymentForm.submit();
+        }, 3000); // 3 second delay to simulate payment processing
+      });
+    }
+  });
+</script>
+
+<style>
+  /* Progress Bar Styles */
+  .progress-steps {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    margin-bottom: 2rem;
+  }
+
+  .progress-steps::before {
+    content: "";
+    position: absolute;
+    top: 15px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #e9ecef;
+    z-index: 1;
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+
+  .step-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+  }
+
+  .step.completed .step-number {
+    background-color: #198754;
+    color: white;
+  }
+
+  .step.active .step-number {
+    background-color: #0d6efd;
+    color: white;
+  }
+
+  .step.completed .step-label,
+  .step.active .step-label {
+    color: #0d6efd;
+    font-weight: 500;
+  }
+</style>
+{% endblock %}

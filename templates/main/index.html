@@ -1,0 +1,1087 @@
+{% extends "main/base.html" %} {% block title %}Home{% endblock %} {% block
+content %}
+
+<div id="loadingScreen" class="loading-screen">
+  <div class="loading-content">
+    <img src="/static/images/logo.jpg" alt="Logo" class="loading-logo" />
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Loading...</p>
+  </div>
+</div>
+
+<!-- Hero Section with Carousel -->
+<section class="hero-section">
+  <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-indicators">
+      <button
+        type="button"
+        data-bs-target="#heroCarousel"
+        data-bs-slide-to="0"
+        class="active"
+      ></button>
+      <button
+        type="button"
+        data-bs-target="#heroCarousel"
+        data-bs-slide-to="1"
+      ></button>
+      <button
+        type="button"
+        data-bs-target="#heroCarousel"
+        data-bs-slide-to="2"
+      ></button>
+    </div>
+    <div class="carousel-inner">
+      <div class="carousel-item active">
+        <div class="carousel-content">
+          <div class="container">
+            <h1>Summer Sale!</h1>
+            <p>Up to 50% off on electronics and fashion</p>
+            <a href="{{ url_for('categories') }}" class="btn btn-light btn-lg">
+              <i class="fas fa-bolt me-2"></i>Shop Now
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="carousel-item">
+        <div class="carousel-content">
+          <div class="container">
+            <h1>New Arrivals</h1>
+            <p>Discover the latest trends and products</p>
+            <a href="{{ url_for('categories') }}" class="btn btn-light btn-lg">
+              <i class="fas fa-star me-2"></i>Explore
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="carousel-item">
+        <div class="carousel-content">
+          <div class="container">
+            <h1>Free Shipping</h1>
+            <p>On all orders above ₹999</p>
+            <a href="{{ url_for('categories') }}" class="btn btn-light btn-lg">
+              <i class="fas fa-shipping-fast me-2"></i>Learn More
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button
+      class="carousel-control-prev"
+      type="button"
+      data-bs-target="#heroCarousel"
+      data-bs-slide="prev"
+    >
+      <span class="carousel-control-prev-icon"></span>
+    </button>
+    <button
+      class="carousel-control-next"
+      type="button"
+      data-bs-target="#heroCarousel"
+      data-bs-slide="next"
+    >
+      <span class="carousel-control-next-icon"></span>
+    </button>
+  </div>
+</section>
+
+<!-- Search Bar with Live Suggestions -->
+<section class="py-4 bg-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="search-container position-relative">
+          <form
+            id="searchForm"
+            action="{{ url_for('categories') }}"
+            method="GET"
+          >
+            <div class="input-group">
+              <input
+                type="text"
+                class="form-control form-control-lg"
+                id="searchInput"
+                name="q"
+                placeholder="Search for products, brands, and more..."
+                autocomplete="off"
+              />
+              <button class="btn btn-primary btn-lg" type="submit">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
+          </form>
+          <div id="searchSuggestions" class="search-suggestions"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Featured Categories -->
+<section class="py-5">
+  <div class="container">
+    <h2 class="text-center mb-5">Shop by Category</h2>
+    <div class="row">
+      {% for category in categories %}
+      <div class="col-md-4 col-lg-2 mb-4">
+        <a
+          href="{{ url_for('category_products', category_id=category.id) }}"
+          class="category-card"
+        >
+          <div class="category-icon">
+            <i class="fas fa-mobile-alt"></i>
+          </div>
+          <h6>{{ category.name }}</h6>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Featured Products (Auto-picked by sales/views) -->
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+      <h2 class="mb-0">Featured Products</h2>
+      <span class="badge bg-primary">Most Popular</span>
+    </div>
+    <div class="row">
+      {% for product in featured_products %}
+      <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card product-card h-100">
+          {% if product.discounted_price %}
+          <div class="discount-badge">
+            Save {{ ((product.price - product.discounted_price) / product.price
+            * 100)|round|int }}%
+          </div>
+          {% endif %}
+          <img
+            src="{{ product.image_url or '/static/images/placeholder.jpg' }}"
+            class="card-img-top product-image"
+            alt="{{ product.name }}"
+          />
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ product.name }}</h5>
+            <p class="card-text flex-grow-1">
+              {{ product.description[:100] }}...
+            </p>
+            <div class="mt-auto">
+              <div class="product-price">
+                {% if product.discounted_price %}
+                <span class="original-price"
+                  >{{ format_currency(product.price) }}</span
+                >
+                {{ format_currency(product.discounted_price) }} {% else %} {{
+                format_currency(product.price) }} {% endif %}
+              </div>
+              <div class="d-grid gap-2">
+                <a
+                  href="{{ url_for('product_detail', product_id=product.id) }}"
+                  class="btn btn-outline-primary"
+                >
+                  <i class="fas fa-eye me-1"></i>View Details
+                </a>
+                <form
+                  method="POST"
+                  action="{{ url_for('add_to_cart', product_id=product.id) }}"
+                  class="add-to-cart-form"
+                >
+                  <button
+                    type="submit"
+                    class="btn btn-primary w-100 add-to-cart-btn"
+                  >
+                    <i class="fas fa-cart-plus me-1"></i>Add to Cart
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Personalized Recommendations -->
+{% if current_user.is_authenticated and recommended_products %}
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+      <h2 class="mb-0">Recommended For You</h2>
+      <small class="text-muted">Based on your interests</small>
+    </div>
+    <div class="row">
+      {% for product in recommended_products %}
+      <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card product-card h-100">
+          {% if product.discounted_price %}
+          <div class="discount-badge">
+            Save {{ product.discount_percentage }}%
+          </div>
+          {% endif %}
+          <img
+            src="{{ product.image_url or '/static/images/placeholder.jpg' }}"
+            class="card-img-top product-image"
+            alt="{{ product.name }}"
+          />
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ product.name }}</h5>
+            <p class="card-text flex-grow-1">
+              {{ product.description[:100] }}...
+            </p>
+            <div class="mt-auto">
+              <div class="product-price">
+                {% if product.discounted_price %}
+                <span class="original-price"
+                  >{{ format_currency(product.price) }}</span
+                >
+                {{ format_currency(product.discounted_price) }} {% else %} {{
+                format_currency(product.price) }} {% endif %}
+              </div>
+              <div class="d-grid gap-2">
+                <a
+                  href="{{ url_for('product_detail', product_id=product.id) }}"
+                  class="btn btn-outline-primary"
+                >
+                  <i class="fas fa-eye me-1"></i>View Details
+                </a>
+                <form
+                  method="POST"
+                  action="{{ url_for('add_to_cart', product_id=product.id) }}"
+                  class="add-to-cart-form"
+                >
+                  <button
+                    type="submit"
+                    class="btn btn-primary w-100 add-to-cart-btn"
+                  >
+                    <i class="fas fa-cart-plus me-1"></i>Add to Cart
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- Recently Viewed Section -->
+{% if current_user.is_authenticated and recently_viewed %}
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+      <h2 class="mb-0">Recently Viewed</h2>
+      <a
+        href="{{ url_for('categories') }}"
+        class="btn btn-outline-primary btn-sm"
+      >
+        View All <i class="fas fa-arrow-right ms-1"></i>
+      </a>
+    </div>
+    <div class="row">
+      {% for product in recently_viewed %}
+      <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card product-card h-100">
+          {% if product.discounted_price %}
+          <div class="discount-badge">
+            Save {{ product.discount_percentage }}%
+          </div>
+          {% endif %}
+          <img
+            src="{{ product.image_url or '/static/images/placeholder.jpg' }}"
+            class="card-img-top product-image"
+            alt="{{ product.name }}"
+          />
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ product.name }}</h5>
+            <p class="card-text flex-grow-1">
+              {{ product.description[:100] }}...
+            </p>
+            <div class="mt-auto">
+              <div class="product-price">
+                {% if product.discounted_price %}
+                <span class="original-price"
+                  >{{ format_currency(product.price) }}</span
+                >
+                {{ format_currency(product.discounted_price) }} {% else %} {{
+                format_currency(product.price) }} {% endif %}
+              </div>
+              <div class="d-grid gap-2">
+                <a
+                  href="{{ url_for('product_detail', product_id=product.id) }}"
+                  class="btn btn-outline-primary"
+                >
+                  <i class="fas fa-eye me-1"></i>View Details
+                </a>
+                <form
+                  method="POST"
+                  action="{{ url_for('add_to_cart', product_id=product.id) }}"
+                  class="add-to-cart-form"
+                >
+                  <button
+                    type="submit"
+                    class="btn btn-primary w-100 add-to-cart-btn"
+                  >
+                    <i class="fas fa-cart-plus me-1"></i>Add to Cart
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- Trending Items -->
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+      <h2 class="mb-0">Trending Now</h2>
+      <span class="badge bg-danger">Hot</span>
+    </div>
+    <div class="row" id="trendingProducts">
+      <!-- Trending products will be loaded via AJAX -->
+    </div>
+  </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="row text-center">
+      <div class="col-md-4 mb-4">
+        <div class="feature-icon mb-3">
+          <i class="fas fa-shipping-fast fa-3x text-primary"></i>
+        </div>
+        <h4>Free Shipping</h4>
+        <p class="text-muted">Free delivery on orders above ₹999</p>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="feature-icon mb-3">
+          <i class="fas fa-shield-alt fa-3x text-primary"></i>
+        </div>
+        <h4>Secure Payment</h4>
+        <p class="text-muted">100% secure payment processing</p>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="feature-icon mb-3">
+          <i class="fas fa-headset fa-3x text-primary"></i>
+        </div>
+        <h4>24/7 Support</h4>
+        <p class="text-muted">Round the clock customer support</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  // Loading Screen Functionality
+  document.addEventListener("DOMContentLoaded", function () {
+    const loadingScreen = document.getElementById("loadingScreen");
+
+    // Show loading screen immediately
+    loadingScreen.style.display = "flex";
+
+    // Hide loading screen when page is fully loaded
+    window.addEventListener("load", function () {
+      // Add a small delay for better UX (so loading screen doesn't flash too quickly)
+      setTimeout(() => {
+        loadingScreen.style.opacity = "0";
+        loadingScreen.style.visibility = "hidden";
+        loadingScreen.style.transition =
+          "opacity 0.5s ease, visibility 0.5s ease";
+
+        // Remove from DOM after transition
+        setTimeout(() => {
+          loadingScreen.style.display = "none";
+        }, 500);
+      }, 1000); // 1 second minimum loading time
+    });
+
+    // Fallback: hide loading screen after max 5 seconds even if page doesn't fully load
+    setTimeout(() => {
+      if (loadingScreen.style.display !== "none") {
+        loadingScreen.style.opacity = "0";
+        loadingScreen.style.visibility = "hidden";
+        loadingScreen.style.transition =
+          "opacity 0.5s ease, visibility 0.5s ease";
+
+        setTimeout(() => {
+          loadingScreen.style.display = "none";
+        }, 500);
+      }
+    }, 5000);
+  });
+
+  // Optional: Show loading screen during AJAX requests
+  let activeRequests = 0;
+
+  function showLoading() {
+    const loadingScreen = document.getElementById("loadingScreen");
+    if (loadingScreen) {
+      loadingScreen.style.display = "flex";
+      loadingScreen.style.opacity = "1";
+      loadingScreen.style.visibility = "visible";
+    }
+    activeRequests++;
+  }
+
+  function hideLoading() {
+    activeRequests = Math.max(0, activeRequests - 1);
+
+    if (activeRequests === 0) {
+      const loadingScreen = document.getElementById("loadingScreen");
+      if (loadingScreen && loadingScreen.style.display !== "none") {
+        setTimeout(() => {
+          loadingScreen.style.opacity = "0";
+          loadingScreen.style.visibility = "hidden";
+
+          setTimeout(() => {
+            loadingScreen.style.display = "none";
+          }, 500);
+        }, 500);
+      }
+    }
+  }
+
+  // Intercept fetch requests for loading states
+  const originalFetch = window.fetch;
+  window.fetch = function (...args) {
+    showLoading();
+    return originalFetch
+      .apply(this, args)
+      .then((response) => {
+        hideLoading();
+        return response;
+      })
+      .catch((error) => {
+        hideLoading();
+        throw error;
+      });
+  };
+
+  // Control body scroll during loading
+  document.addEventListener("DOMContentLoaded", function () {
+    document.body.classList.add("loading");
+
+    window.addEventListener("load", function () {
+      setTimeout(() => {
+        document.body.classList.remove("loading");
+      }, 500);
+    });
+  });
+
+  // Search with live suggestions
+  document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("searchInput");
+    const searchSuggestions = document.getElementById("searchSuggestions");
+    let debounceTimer;
+
+    searchInput.addEventListener("input", function (e) {
+      clearTimeout(debounceTimer);
+      const query = e.target.value.trim();
+
+      if (query.length < 2) {
+        searchSuggestions.style.display = "none";
+        return;
+      }
+
+      debounceTimer = setTimeout(() => {
+        fetch(`/api/search-suggestions?q=${encodeURIComponent(query)}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.products && data.products.length > 0) {
+              displaySuggestions(data.products);
+            } else {
+              searchSuggestions.style.display = "none";
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching suggestions:", error);
+            searchSuggestions.style.display = "none";
+          });
+      }, 300);
+    });
+
+    function displaySuggestions(products) {
+      searchSuggestions.innerHTML = products
+        .map(
+          (product) => `
+      <div class="suggestion-item" data-product-id="${product.id}">
+        <img src="${
+          product.image_url || "/static/images/placeholder.jpg"
+        }" alt="${product.name}">
+        <div class="suggestion-info">
+          <div class="suggestion-name">${product.name}</div>
+          <div class="suggestion-price">${product.price}</div>
+        </div>
+      </div>
+    `
+        )
+        .join("");
+
+      // Add click event to suggestion items
+      searchSuggestions.querySelectorAll(".suggestion-item").forEach((item) => {
+        item.addEventListener("click", function () {
+          const productId = this.getAttribute("data-product-id");
+          window.location.href = `/product/${productId}`;
+        });
+      });
+
+      searchSuggestions.style.display = "block";
+    }
+
+    // Hide suggestions when clicking outside
+    document.addEventListener("click", function (e) {
+      if (
+        !searchInput.contains(e.target) &&
+        !searchSuggestions.contains(e.target)
+      ) {
+        searchSuggestions.style.display = "none";
+      }
+    });
+
+    // Load trending products
+    loadTrendingProducts();
+  });
+
+  // Load trending products via AJAX
+  function loadTrendingProducts() {
+    fetch("/api/trending-products")
+      .then((response) => response.json())
+      .then((data) => {
+        const container = document.getElementById("trendingProducts");
+        if (data.products && data.products.length > 0) {
+          container.innerHTML = data.products
+            .map(
+              (product) => `
+          <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card product-card h-100">
+              ${
+                product.discounted_price
+                  ? `
+                <div class="discount-badge">
+                  Save ${Math.round(
+                    ((product.price - product.discounted_price) /
+                      product.price) *
+                      100
+                  )}%
+                </div>
+              `
+                  : ""
+              }
+              <img src="${
+                product.image_url || "/static/images/placeholder.jpg"
+              }" class="card-img-top product-image" alt="${product.name}">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">${product.name}</h5>
+                <p class="card-text flex-grow-1">${
+                  product.description
+                    ? product.description.substring(0, 100) + "..."
+                    : ""
+                }</p>
+                <div class="mt-auto">
+                  <div class="product-price">
+                    ${
+                      product.discounted_price
+                        ? `
+                      <span class="original-price">₹${product.price.toLocaleString()}</span>
+                      ₹${product.discounted_price.toLocaleString()}
+                    `
+                        : `₹${product.price.toLocaleString()}`
+                    }
+                  </div>
+                  <div class="d-grid gap-2">
+                    <a href="/product/${
+                      product.id
+                    }" class="btn btn-outline-primary">
+                      <i class="fas fa-eye me-1"></i>View Details
+                    </a>
+                    <form method="POST" action="/add_to_cart/${
+                      product.id
+                    }" class="add-to-cart-form">
+                      <button type="submit" class="btn btn-primary w-100 add-to-cart-btn">
+                        <i class="fas fa-cart-plus me-1"></i>Add to Cart
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+            )
+            .join("");
+        } else {
+          container.innerHTML =
+            '<div class="col-12 text-center"><p class="text-muted">No trending products found.</p></div>';
+        }
+      })
+      .catch((error) => {
+        console.error("Error loading trending products:", error);
+        document.getElementById("trendingProducts").innerHTML =
+          '<div class="col-12 text-center"><p class="text-muted">Error loading trending products.</p></div>';
+      });
+  }
+
+  // Quick add to cart functionality
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".add-to-cart-form").forEach((form) => {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const url = this.getAttribute("action");
+
+        fetch(url, {
+          method: "POST",
+          body: formData,
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              // Update cart count in navbar
+              const cartCount = document.querySelector(".cart-count");
+              if (cartCount) {
+                cartCount.textContent =
+                  data.cart_count || parseInt(cartCount.textContent) + 1;
+              }
+
+              // Show success message
+              showToast("Product added to cart!", "success");
+            } else {
+              showToast(
+                data.message || "Error adding product to cart",
+                "error"
+              );
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showToast("Error adding product to cart", "error");
+          });
+      });
+    });
+  });
+
+  function showToast(message, type = "info") {
+    // Simple toast notification
+    const toast = document.createElement("div");
+    toast.className = `alert alert-${
+      type === "success" ? "success" : "danger"
+    } alert-dismissible fade show position-fixed`;
+    toast.style.cssText =
+      "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+    toast.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+    document.body.appendChild(toast);
+
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 3000);
+  }
+</script>
+
+<style>
+  /* Navy Blue & Yellow Color Scheme */
+  :root {
+    --navy-blue: #1e3a8a;
+    --navy-dark: #172554;
+    --navy-light: #3b82f6;
+    --bright-yellow: #f59e0b;
+    --yellow-dark: #d97706;
+    --yellow-light: #fbbf24;
+  }
+
+  /* Hero Carousel Styles */
+  .hero-section .carousel-item {
+    height: 500px;
+    background: linear-gradient(
+      135deg,
+      var(--navy-blue) 0%,
+      var(--navy-dark) 100%
+    );
+  }
+
+  .hero-section .carousel-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: white;
+  }
+
+  .hero-section .carousel-content h1 {
+    font-size: 3.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .hero-section .carousel-content p {
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Search Suggestions Styles */
+  .search-container {
+    position: relative;
+  }
+
+  .search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: none;
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .suggestion-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f8f9fa;
+    transition: background-color 0.2s;
+  }
+
+  .suggestion-item:hover {
+    background-color: #e8f1ff;
+  }
+
+  .suggestion-item img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 0.25rem;
+    margin-right: 1rem;
+  }
+
+  .suggestion-info {
+    flex: 1;
+  }
+
+  .suggestion-name {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: var(--navy-blue);
+  }
+
+  .suggestion-price {
+    color: var(--navy-blue);
+    font-weight: bold;
+  }
+
+  /* Product Card Enhancements */
+  .product-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #e9ecef;
+  }
+
+  .product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(30, 58, 138, 0.15);
+    border-color: var(--navy-blue);
+  }
+
+  .discount-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--bright-yellow);
+    color: #000;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    z-index: 1;
+  }
+
+  .original-price {
+    text-decoration: line-through;
+    color: #6c757d;
+    font-size: 0.9em;
+    margin-right: 0.5rem;
+  }
+
+  /* Category Icons */
+  .category-card {
+    display: block;
+    text-align: center;
+    padding: 1.5rem 1rem;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid #e9ecef;
+  }
+
+  .category-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(30, 58, 138, 0.2);
+    color: inherit;
+    border-color: var(--navy-blue);
+  }
+
+  .category-icon {
+    font-size: 2rem;
+    color: var(--navy-blue);
+    margin-bottom: 1rem;
+  }
+
+  /* Feature Icons */
+  .feature-icon {
+    color: var(--navy-blue);
+  }
+
+  /* Buttons */
+  .btn-primary {
+    background-color: var(--navy-blue);
+    border-color: var(--navy-blue);
+  }
+
+  .btn-primary:hover {
+    background-color: var(--navy-dark);
+    border-color: var(--navy-dark);
+  }
+
+  .btn-outline-primary {
+    color: var(--navy-blue);
+    border-color: var(--navy-blue);
+  }
+
+  .btn-outline-primary:hover {
+    background-color: var(--navy-blue);
+    border-color: var(--navy-blue);
+  }
+
+  /* Badges */
+  .badge.bg-primary {
+    background-color: var(--navy-blue) !important;
+  }
+
+  .badge.bg-danger {
+    background-color: var(--bright-yellow) !important;
+    color: #000;
+  }
+
+  /* Toast Notifications */
+  .alert-success {
+    background-color: #e8f1ff;
+    border-color: var(--navy-blue);
+    color: #1e3a8a;
+  }
+
+  .alert-danger {
+    background-color: #fef3c7;
+    border-color: var(--bright-yellow);
+    color: #92400e;
+  }
+
+  /* Product Image Styles */
+  .product-image {
+    height: 200px;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  /* Section Backgrounds */
+  .bg-light {
+    background-color: #f8f9fa !important;
+  }
+
+  /* Text Colors */
+  .text-muted {
+    color: #6c757d !important;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .hero-section .carousel-content h1 {
+      font-size: 2.5rem;
+    }
+
+    .hero-section .carousel-content p {
+      font-size: 1.2rem;
+    }
+
+    .search-container {
+      margin-bottom: 1rem;
+    }
+
+    .category-card {
+      padding: 1rem 0.5rem;
+    }
+
+    .category-icon {
+      font-size: 1.5rem;
+    }
+  }
+
+  /* Loading Animation for Trending Products */
+  .fa-spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Add to Cart Button Animation */
+  .add-to-cart-btn {
+    transition: all 0.3s ease;
+  }
+
+  .add-to-cart-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Featured Products Section */
+  .featured-products {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  }
+
+  /* Hero Button Styles */
+  .hero-section .btn-light {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.9);
+    color: var(--navy-blue);
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .hero-section .btn-light:hover {
+    background-color: white;
+    border-color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+  /* Loading Screen Styles */
+  .loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      135deg,
+      var(--navy-blue) 0%,
+      var(--navy-dark) 100%
+    );
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+  }
+
+  .loading-content {
+    text-align: center;
+    color: white;
+  }
+
+  .loading-logo {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    animation: logoPulse 2s ease-in-out infinite;
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid var(--bright-yellow);
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    animation: spin 1s linear infinite;
+  }
+
+  .loading-text {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    margin: 0;
+    animation: textFade 2s ease-in-out infinite;
+  }
+
+  @keyframes logoPulse {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.8;
+    }
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes textFade {
+    0%,
+    100% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  /* Ensure body doesn't scroll during loading */
+  body.loading {
+    overflow: hidden;
+  }
+
+  /* Hide loading screen when not needed */
+  .loading-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+  }
+</style>
+{% endblock %}

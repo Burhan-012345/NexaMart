@@ -1,0 +1,779 @@
+{% extends "main/base.html" %} {% block title %}Track Order{% endblock %} {%
+block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h3 class="mb-0">
+            <i class="fas fa-truck me-2"></i>Track Your Order
+          </h3>
+        </div>
+        <div class="card-body">
+          <form method="POST" class="mb-4">
+            <div class="input-group">
+              <input
+                type="text"
+                class="form-control form-control-lg"
+                name="order_id"
+                placeholder="Enter your Order ID (e.g., NM12345678)"
+                value="{{ request.form.order_id }}"
+                required
+              />
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-search me-2"></i>Track Order
+              </button>
+            </div>
+            <small class="form-text text-muted">
+              Your Order ID was sent to your email after purchase. Format: NM
+              followed by 8 digits.
+            </small>
+          </form>
+
+          {% if searched %} {% if order %}
+          <div class="tracking-info">
+            <div class="card bg-light">
+              <div class="card-body">
+                <h5 class="card-title">Order Information</h5>
+                <div class="row">
+                  <div class="col-md-6">
+                    <p><strong>Order ID:</strong> {{ order.order_id }}</p>
+                    <p>
+                      <strong>Order Date:</strong> {{
+                      order.created_at.strftime('%d %b, %Y %I:%M %p') }}
+                    </p>
+                    {% if order.status == 'cancelled' %}
+                    <p>
+                      <strong>Cancelled On:</strong> {{
+                      order.updated_at.strftime('%d %b, %Y %I:%M %p') }}
+                    </p>
+                    {% endif %}
+                  </div>
+                  <div class="col-md-6">
+                    <p>
+                      <strong>Total Amount:</strong> {{
+                      format_currency(order.total_amount) }}
+                    </p>
+                    <p>
+                      <strong>Status:</strong>
+                      <span class="badge {{ order.get_status_badge_class() }}">
+                        {{ order.status|title }}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Cancel Order Button -->
+                {% if current_user.is_authenticated and order.user_id ==
+                current_user.id and order.can_cancel() %}
+                <div class="mt-3">
+                  <form
+                    method="POST"
+                    action="{{ url_for('cancel_order', order_id=order.id) }}"
+                    class="d-inline"
+                  >
+                    <button
+                      type="button"
+                      class="btn btn-danger btn-sm cancel-order-btn"
+                      data-order-id="{{ order.order_id }}"
+                    >
+                      <i class="fas fa-times me-2"></i>Cancel Order
+                    </button>
+                  </form>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Order Progress -->
+            <div class="mt-4">
+              <h5 class="mb-3">
+                {% if order.status == 'cancelled' %} Order Status {% else %}
+                Order Progress {% endif %}
+              </h5>
+              {% if order.status == 'cancelled' %}
+              <div class="alert alert-danger text-center">
+                <i class="fas fa-ban fa-2x mb-2"></i>
+                <h5>Order Cancelled</h5>
+                <p class="mb-0">
+                  This order was cancelled on {{ order.updated_at.strftime('%d
+                  %b, %Y %I:%M %p') }}
+                </p>
+              </div>
+              {% else %}
+              <!-- Enhanced Progress Bar with Live Tracking -->
+              <div class="progress-track">
+                <ul class="progressbar">
+                  <li
+                    class="{% if order.status in ['confirmed', 'processing', 'packed', 'shipped', 'delivered'] %}active{% endif %}"
+                  >
+                    <i class="fas fa-check"></i>
+                    <span>Order Confirmed</span>
+                    <small class="status-time">
+                      {% if order.created_at %} {{ order.created_at.strftime('%d
+                      %b, %I:%M %p') }} {% endif %}
+                    </small>
+                  </li>
+                  <li
+                    class="{% if order.status in ['processing', 'packed', 'shipped', 'delivered'] %}active{% endif %}"
+                  >
+                    <i class="fas fa-cog"></i>
+                    <span>Processing</span>
+                    <small class="status-time">
+                      {% if order.status in ['processing', 'packed', 'shipped',
+                      'delivered'] %} {{ order.created_at.strftime('%d %b, %I:%M
+                      %p') }} {% endif %}
+                    </small>
+                  </li>
+                  <li
+                    class="{% if order.status in ['packed', 'shipped', 'delivered'] %}active{% endif %}"
+                  >
+                    <i class="fas fa-box"></i>
+                    <span>Packed</span>
+                    <small class="status-time">
+                      {% if order.status in ['packed', 'shipped', 'delivered']
+                      %} {{ order.created_at.strftime('%d %b, %I:%M %p') }} {%
+                      endif %}
+                    </small>
+                  </li>
+                  <li
+                    class="{% if order.status in ['shipped', 'delivered'] %}active{% endif %}"
+                  >
+                    <i class="fas fa-shipping-fast"></i>
+                    <span>Shipped</span>
+                    <small class="status-time">
+                      {% if order.status in ['shipped', 'delivered'] %} {{
+                      order.created_at.strftime('%d %b, %I:%M %p') }} {% endif
+                      %}
+                    </small>
+                  </li>
+                  <li
+                    class="{% if order.status == 'delivered' %}active{% endif %}"
+                  >
+                    <i class="fas fa-box-open"></i>
+                    <span>Delivered</span>
+                    <small class="status-time">
+                      {% if order.status == 'delivered' %} {{
+                      order.created_at.strftime('%d %b, %I:%M %p') }} {% endif
+                      %}
+                    </small>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Delivery Information -->
+              <div class="delivery-info mt-4">
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="card">
+                      <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                          <i class="fas fa-calendar-alt me-2"></i>Estimated
+                          Delivery
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <p class="mb-1">
+                          <strong>Date:</strong> {{ get_delivery_date() }}
+                        </p>
+                        <p class="mb-0">
+                          <strong>Time:</strong> 9:00 AM - 6:00 PM
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="card">
+                      <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                          <i class="fas fa-truck me-2"></i>Courier Details
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <p class="mb-1">
+                          <strong>Service:</strong> Standard Delivery
+                        </p>
+                        <p class="mb-0">
+                          <strong>Tracking ID:</strong>
+                          {% if order.tracking_number %} {{
+                          order.tracking_number }} {% else %}
+                          <span class="text-muted">Will be updated soon</span>
+                          {% endif %}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Support Options -->
+              <div class="support-options mt-4">
+                <div class="card">
+                  <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                      <i class="fas fa-headset me-2"></i>Need Help?
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <h6>Delivery Issues</h6>
+                        <p class="small text-muted">
+                          Experiencing delays or delivery problems?
+                        </p>
+                        <button
+                          class="btn btn-outline-primary btn-sm raise-ticket-btn"
+                          data-issue-type="delivery"
+                        >
+                          <i class="fas fa-clock me-1"></i>Report Delay
+                        </button>
+                      </div>
+                      <div class="col-md-6">
+                        <h6>Return Request</h6>
+                        <p class="small text-muted">
+                          Need to return or exchange an item?
+                        </p>
+                        <button
+                          class="btn btn-outline-primary btn-sm raise-ticket-btn"
+                          data-issue-type="return"
+                        >
+                          <i class="fas fa-exchange-alt me-1"></i>Request Return
+                        </button>
+                      </div>
+                    </div>
+                    <div class="row mt-3">
+                      <div class="col-md-6">
+                        <h6>Other Issues</h6>
+                        <p class="small text-muted">
+                          Any other concerns with your order?
+                        </p>
+                        <button
+                          class="btn btn-outline-primary btn-sm raise-ticket-btn"
+                          data-issue-type="other"
+                        >
+                          <i class="fas fa-question-circle me-1"></i>Get Help
+                        </button>
+                      </div>
+                      <div class="col-md-6">
+                        <h6>Contact Support</h6>
+                        <p class="small text-muted">
+                          Reach out to our customer service team
+                        </p>
+                        <a
+                          href="mailto:support@nexamart.com"
+                          class="btn btn-outline-primary btn-sm"
+                        >
+                          <i class="fas fa-envelope me-1"></i>Email Support
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Order Items -->
+            <div class="mt-4">
+              <h5 class="mb-3">Order Items</h5>
+              {% for item in order.items %}
+              <div class="card mb-2">
+                <div class="card-body py-2">
+                  <div class="row align-items-center">
+                    <div class="col-md-2">
+                      <img
+                        src="{{ item.product.image_url or '/static/images/placeholder.jpg' }}"
+                        class="img-fluid rounded"
+                        style="height: 50px; object-fit: cover"
+                      />
+                    </div>
+                    <div class="col-md-6">
+                      <h6 class="mb-0">{{ item.product.name }}</h6>
+                      <small class="text-muted">Qty: {{ item.quantity }}</small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                      <strong
+                        >{{ format_currency(item.price * item.quantity)
+                        }}</strong
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+
+            <!-- Shipping Address -->
+            <div class="mt-4">
+              <h5 class="mb-3">Shipping Address</h5>
+              <div class="card">
+                <div class="card-body">
+                  <pre
+                    class="mb-0"
+                    style="font-family: inherit; white-space: pre-wrap"
+                  >
+{{ order.shipping_address }}</pre
+                  >
+                </div>
+              </div>
+            </div>
+
+            {% if current_user.is_authenticated and order.user_id ==
+            current_user.id %}
+            <div class="text-center mt-4">
+              <a
+                href="{{ url_for('print_receipt', order_id=order.id) }}"
+                class="btn btn-outline-primary"
+                target="_blank"
+              >
+                <i class="fas fa-print me-2"></i>Print Receipt
+              </a>
+            </div>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="alert alert-warning text-center">
+            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+            <h4>Order Not Found</h4>
+            <p class="mb-0">Please check your Order ID and try again.</p>
+          </div>
+          {% endif %} {% endif %}
+        </div>
+      </div>
+
+      {% if current_user.is_authenticated and current_user.orders %}
+      <div class="card mt-4">
+        <div class="card-header bg-secondary text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-history me-2"></i>Your Recent Orders
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="list-group">
+            {% for user_order in current_user.orders[:5] %}
+            <a
+              href="javascript:void(0)"
+              class="list-group-item list-group-item-action"
+              onclick="document.querySelector('input[name=\\'order_id\\']').value='{{ user_order.order_id }}'; document.forms[0].submit();"
+            >
+              <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1">{{ user_order.order_id }}</h6>
+                <small class="text-muted"
+                  >{{ user_order.created_at.strftime('%d %b, %Y') }}</small
+                >
+              </div>
+              <p class="mb-1">{{ format_currency(user_order.total_amount) }}</p>
+              <small class="badge {{ user_order.get_status_badge_class() }}"
+                >{{ user_order.status|title }}</small
+              >
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Support Ticket Modal -->
+<div
+  class="modal fade"
+  id="supportTicketModal"
+  tabindex="-1"
+  aria-labelledby="supportTicketModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="supportTicketModalLabel">
+          Raise Support Ticket
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="supportTicketForm">
+          <input
+            type="hidden"
+            id="ticketOrderId"
+            value="{{ order.order_id if order else '' }}"
+          />
+          <input type="hidden" id="ticketIssueType" />
+          <div class="mb-3">
+            <label for="ticketSubject" class="form-label">Subject</label>
+            <input
+              type="text"
+              class="form-control"
+              id="ticketSubject"
+              required
+            />
+          </div>
+          <div class="mb-3">
+            <label for="ticketDescription" class="form-label"
+              >Description</label
+            >
+            <textarea
+              class="form-control"
+              id="ticketDescription"
+              rows="4"
+              required
+            ></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="ticketPriority" class="form-label">Priority</label>
+            <select class="form-select" id="ticketPriority" required>
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="submitTicketBtn">
+          Submit Ticket
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block styles %}
+<style>
+  .progressbar {
+    display: flex;
+    justify-content: space-between;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .progressbar li {
+    text-align: center;
+    position: relative;
+    flex: 1;
+  }
+
+  .progressbar li:before {
+    content: "";
+    width: 30px;
+    height: 30px;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    background: white;
+    display: block;
+    margin: 0 auto 10px;
+    z-index: 1;
+    position: relative;
+  }
+
+  .progressbar li:after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: #ddd;
+    top: 15px;
+    left: -50%;
+    z-index: 0;
+  }
+
+  .progressbar li:first-child:after {
+    content: none;
+  }
+
+  .progressbar li.active:before {
+    border-color: #001f3f; /* Navy Blue */
+    background: #001f3f;
+    color: white;
+  }
+
+  .progressbar li.active:after {
+    background: #001f3f; /* Navy Blue */
+  }
+
+  .progressbar li i {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    z-index: 2;
+    display: none;
+  }
+
+  .progressbar li.active i {
+    display: block;
+  }
+
+  .progressbar li span {
+    font-size: 0.9rem;
+    color: #666;
+  }
+
+  .progressbar li.active span {
+    color: #001f3f; /* Navy Blue */
+    font-weight: bold;
+  }
+
+  .progressbar li .status-time {
+    display: block;
+    font-size: 0.7rem;
+    color: #888;
+    margin-top: 5px;
+  }
+
+  .order-status {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  .status-pending {
+    background: #fff3cd;
+    color: #856404;
+  }
+  .status-confirmed {
+    background: #cce5ff;
+    color: #004085;
+  }
+  .status-processing {
+    background: #d1ecf1;
+    color: #0c5460;
+  }
+  .status-packed {
+    background: #d1e7dd;
+    color: #0f5132;
+  }
+  .status-shipped {
+    background: #e2e3e5;
+    color: #383d41;
+  }
+  .status-delivered {
+    background: #d4edda;
+    color: #155724;
+  }
+  .status-cancelled {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  /* Theme Colors */
+  .bg-primary {
+    background-color: #001f3f !important; /* Navy Blue */
+  }
+
+  .btn-primary {
+    background-color: #001f3f;
+    border-color: #001f3f;
+  }
+
+  .btn-primary:hover {
+    background-color: #003366;
+    border-color: #003366;
+  }
+
+  .btn-outline-primary {
+    color: #001f3f;
+    border-color: #001f3f;
+  }
+
+  .btn-outline-primary:hover {
+    background-color: #001f3f;
+    border-color: #001f3f;
+    color: white;
+  }
+
+  .bg-warning {
+    background-color: #ffd700 !important; /* Bright Yellow */
+  }
+
+  .text-warning {
+    color: #ffd700 !important;
+  }
+
+  .card-header.bg-primary {
+    background-color: #001f3f !important;
+  }
+
+  .card-header.bg-warning {
+    background-color: #ffd700 !important;
+    color: #333 !important;
+  }
+
+  .raise-ticket-btn:hover {
+    background-color: #001f3f;
+    color: white;
+  }
+</style>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Handle cancel order button in track order page
+    const cancelButton = document.querySelector(".cancel-order-btn");
+    if (cancelButton) {
+      cancelButton.addEventListener("click", function (e) {
+        e.preventDefault();
+
+        const orderId = this.getAttribute("data-order-id");
+        const form = this.closest("form");
+
+        if (
+          confirm(
+            `Are you sure you want to cancel order ${orderId}? This action cannot be undone.`
+          )
+        ) {
+          // Show loading state
+          const originalText = this.innerHTML;
+          this.innerHTML =
+            '<i class="fas fa-spinner fa-spin me-2"></i>Cancelling...';
+          this.disabled = true;
+
+          // Submit the form
+          fetch(form.action, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              "X-Requested-With": "XMLHttpRequest",
+            },
+            body: new URLSearchParams(new FormData(form)),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                showNotification(data.message, "success");
+                // Reload the page to update the order status
+                setTimeout(() => {
+                  window.location.reload();
+                }, 1500);
+              } else {
+                showNotification(data.message, "danger");
+                // Reset button state
+                this.innerHTML = originalText;
+                this.disabled = false;
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              showNotification(
+                "An error occurred while cancelling the order.",
+                "danger"
+              );
+              // Reset button state
+              this.innerHTML = originalText;
+              this.disabled = false;
+            });
+        }
+      });
+    }
+
+    // Handle support ticket buttons
+    const raiseTicketButtons = document.querySelectorAll(".raise-ticket-btn");
+    const supportTicketModal = new bootstrap.Modal(
+      document.getElementById("supportTicketModal")
+    );
+    const ticketIssueType = document.getElementById("ticketIssueType");
+    const ticketSubject = document.getElementById("ticketSubject");
+    const ticketDescription = document.getElementById("ticketDescription");
+    const submitTicketBtn = document.getElementById("submitTicketBtn");
+
+    raiseTicketButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const issueType = this.getAttribute("data-issue-type");
+        ticketIssueType.value = issueType;
+
+        // Pre-fill subject based on issue type
+        const orderId = document.getElementById("ticketOrderId").value;
+        let subject = "";
+
+        switch (issueType) {
+          case "delivery":
+            subject = `Delivery Issue - Order ${orderId}`;
+            break;
+          case "return":
+            subject = `Return Request - Order ${orderId}`;
+            break;
+          case "other":
+            subject = `Support Request - Order ${orderId}`;
+            break;
+        }
+
+        ticketSubject.value = subject;
+        supportTicketModal.show();
+      });
+    });
+
+    // Handle ticket submission
+    submitTicketBtn.addEventListener("click", function () {
+      const issueType = ticketIssueType.value;
+      const subject = ticketSubject.value;
+      const description = ticketDescription.value;
+      const priority = document.getElementById("ticketPriority").value;
+      const orderId = document.getElementById("ticketOrderId").value;
+
+      if (!subject || !description) {
+        showNotification("Please fill in all required fields.", "warning");
+        return;
+      }
+
+      // Show loading state
+      const originalText = this.innerHTML;
+      this.innerHTML =
+        '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+      this.disabled = true;
+
+      // In a real application, you would send this data to your backend
+      // For now, we'll simulate a successful submission
+      setTimeout(() => {
+        showNotification(
+          "Support ticket submitted successfully! Our team will contact you soon.",
+          "success"
+        );
+        supportTicketModal.hide();
+
+        // Reset form
+        document.getElementById("supportTicketForm").reset();
+
+        // Reset button
+        this.innerHTML = originalText;
+        this.disabled = false;
+      }, 1500);
+    });
+
+    function showNotification(message, type) {
+      // Remove any existing notifications
+      const existingAlerts = document.querySelectorAll(".custom-alert");
+      existingAlerts.forEach((alert) => alert.remove());
+
+      // Create new notification
+      const alertDiv = document.createElement("div");
+      alertDiv.className = `alert alert-${type} alert-dismissible fade show custom-alert`;
+      alertDiv.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+      alertDiv.style.cssText =
+        "position: fixed; top: 20px; right: 20px; z-index: 1060; min-width: 300px;";
+
+      document.body.appendChild(alertDiv);
+
+      // Auto remove after 5 seconds
+      setTimeout(() => {
+        if (alertDiv.parentNode) {
+          alertDiv.remove();
+        }
+      }, 5000);
+    }
+  });
+</script>
+{% endblock %}

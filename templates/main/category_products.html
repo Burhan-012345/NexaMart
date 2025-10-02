@@ -1,0 +1,1343 @@
+{% extends "main/base.html" %} {% block title %}{{ category.name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('categories') }}">Categories</a>
+      </li>
+      <li class="breadcrumb-item active">{{ category.name }}</li>
+    </ol>
+  </nav>
+
+  <!-- Category Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h1 class="mb-2">{{ category.name }}</h1>
+          <p class="text-muted mb-0">{{ category.description }}</p>
+          <small class="text-muted">{{ products|length }} products available</small>
+        </div>
+        <div class="text-end">
+          <!-- Comparison Basket -->
+          <div class="comparison-basket position-relative">
+            <button class="btn btn-outline-teal position-relative" id="comparisonBasket">
+              <i class="fas fa-balance-scale"></i>
+              Compare (<span id="compareCount">0</span>)
+            </button>
+            <div class="comparison-dropdown" id="comparisonDropdown">
+              <div class="comparison-items" id="comparisonItems">
+                <!-- Comparison items will be added here -->
+              </div>
+              <div class="comparison-actions">
+                <button class="btn btn-teal btn-sm w-100" id="compareNow" disabled>
+                  Compare Now
+                </button>
+                <button class="btn btn-outline-teal btn-sm w-100 mt-1" id="clearComparison">
+                  Clear All
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Filters Sidebar -->
+    <div class="col-lg-3 mb-4">
+      <div class="card filter-card">
+        <div class="card-header bg-teal text-white">
+          <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+        </div>
+        <div class="card-body">
+          <!-- Price Range -->
+          <div class="filter-section mb-4">
+            <h6 class="filter-title">Price Range</h6>
+            <div class="price-inputs d-flex gap-2 mb-2">
+              <input type="number" class="form-control form-control-sm" placeholder="Min" id="priceMin">
+              <input type="number" class="form-control form-control-sm" placeholder="Max" id="priceMax">
+            </div>
+            <div class="price-slider">
+              <input type="range" class="form-range" min="0" max="100000" step="1000" id="priceRange">
+            </div>
+            <div class="price-display text-center">
+              <small class="text-muted" id="priceDisplay">₹0 - ₹100,000</small>
+            </div>
+          </div>
+
+          <!-- Rating Filter -->
+          <div class="filter-section mb-4">
+            <h6 class="filter-title">Customer Rating</h6>
+            <div class="rating-filters">
+              {% for rating in [4, 3, 2, 1] %}
+              <div class="form-check">
+                <input class="form-check-input rating-filter" type="checkbox" value="{{ rating }}" id="rating{{ rating }}">
+                <label class="form-check-label" for="rating{{ rating }}">
+                  {% for i in range(rating) %}
+                  <i class="fas fa-star text-warning"></i>
+                  {% endfor %}
+                  {% for i in range(5-rating) %}
+                  <i class="far fa-star text-warning"></i>
+                  {% endfor %}
+                  & above
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Availability -->
+          <div class="filter-section mb-4">
+            <h6 class="filter-title">Availability</h6>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="inStockOnly">
+              <label class="form-check-label" for="inStockOnly">
+                In Stock Only
+              </label>
+            </div>
+          </div>
+
+          <!-- Discount Filter -->
+          <div class="filter-section mb-4">
+            <h6 class="filter-title">Discount</h6>
+            <div class="discount-filters">
+              <div class="form-check">
+                <input class="form-check-input discount-filter" type="checkbox" value="10" id="discount10">
+                <label class="form-check-label" for="discount10">
+                  10% & above
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input discount-filter" type="checkbox" value="20" id="discount20">
+                <label class="form-check-label" for="discount20">
+                  20% & above
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input discount-filter" type="checkbox" value="30" id="discount30">
+                <label class="form-check-label" for="discount30">
+                  30% & above
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input discount-filter" type="checkbox" value="50" id="discount50">
+                <label class="form-check-label" for="discount50">
+                  50% & above
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clear Filters -->
+          <button class="btn btn-outline-teal w-100" id="clearFilters">
+            <i class="fas fa-times me-1"></i>Clear All Filters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products Section -->
+    <div class="col-lg-9">
+      <!-- Toolbar -->
+      <div class="card mb-4">
+        <div class="card-body py-2">
+          <div class="row align-items-center">
+            <div class="col-md-4">
+              <small class="text-muted" id="productCount">
+                Showing {{ products|length }} products
+              </small>
+            </div>
+            <div class="col-md-5">
+              <div class="d-flex align-items-center gap-3">
+                <small class="text-muted">Sort by:</small>
+                <select class="form-select form-select-sm" id="sortProducts">
+                  <option value="featured">Featured</option>
+                  <option value="price_low">Price: Low to High</option>
+                  <option value="price_high">Price: High to Low</option>
+                  <option value="name">Name: A to Z</option>
+                  <option value="name_desc">Name: Z to A</option>
+                  <option value="rating">Highest Rated</option>
+                  <option value="discount">Biggest Discount</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-3 text-end">
+              <div class="btn-group" role="group">
+                <input type="radio" class="btn-check" name="viewMode" id="gridView" autocomplete="off" checked>
+                <label class="btn btn-outline-teal btn-sm" for="gridView" title="Grid View">
+                  <i class="fas fa-th-large"></i>
+                </label>
+                <input type="radio" class="btn-check" name="viewMode" id="listView" autocomplete="off">
+                <label class="btn btn-outline-teal btn-sm" for="listView" title="List View">
+                  <i class="fas fa-list"></i>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Products Grid/List -->
+      <div class="row" id="productsContainer">
+        {% for product in products %}
+        <div class="col-md-6 col-xl-4 mb-4 product-item" 
+             data-price="{{ product.current_price }}"
+             data-rating="{{ product.average_rating or 0 }}"
+             data-discount="{{ product.discount_percentage }}"
+             data-stock="{{ product.stock_quantity }}"
+             data-name="{{ product.name|lower }}">
+          <div class="card product-card h-100">
+            <!-- Product Actions -->
+            <div class="product-actions">
+              <!-- Wishlist Button -->
+              <button class="btn wishlist-btn {% if product.in_wishlist %}wishlisted{% endif %}" 
+                      data-product-id="{{ product.id }}"
+                      title="Add to Wishlist">
+                <i class="fas fa-heart"></i>
+              </button>
+              
+              <!-- Compare Button -->
+              <button class="btn compare-btn" 
+                      data-product-id="{{ product.id }}"
+                      data-product-name="{{ product.name }}"
+                      data-product-image="{{ product.image_url }}"
+                      data-product-price="{{ product.current_price }}"
+                      title="Add to Compare">
+                <i class="fas fa-balance-scale"></i>
+              </button>
+            </div>
+
+            {% if product.discounted_price %}
+            <div class="discount-badge">
+              Save {{ product.discount_percentage }}%
+            </div>
+            {% endif %}
+
+            <!-- Product Image -->
+            <div class="product-image-container">
+              <img
+                src="{{ product.image_url or '/static/images/placeholder.jpg' }}"
+                class="card-img-top product-image"
+                alt="{{ product.name }}"
+                loading="lazy"
+              />
+            </div>
+
+            <!-- Product Info -->
+            <div class="card-body d-flex flex-column">
+              <!-- Grid View -->
+              <div class="product-view-grid">
+                <h5 class="card-title product-name">{{ product.name }}</h5>
+                
+                <!-- Rating -->
+                <div class="product-rating mb-2">
+                  {% set avg_rating = product.average_rating or 0 %}
+                  {% for i in range(5) %}
+                    {% if i < avg_rating %}
+                    <i class="fas fa-star text-warning"></i>
+                    {% else %}
+                    <i class="far fa-star text-warning"></i>
+                    {% endif %}
+                  {% endfor %}
+                  <small class="text-muted ms-1">({{ product.review_count or 0 }})</small>
+                </div>
+
+                <p class="card-text text-muted product-description">
+                  {{ product.description[:80] }}...
+                </p>
+
+                <div class="mt-auto">
+                  <div class="product-price mb-2">
+                    {% if product.discounted_price %}
+                    <span class="original-price text-muted">
+                      <del>{{ format_currency(product.price) }}</del>
+                    </span>
+                    <span class="current-price text-teal fw-bold">
+                      {{ format_currency(product.discounted_price) }}
+                    </span>
+                    {% else %}
+                    <span class="current-price text-teal fw-bold">
+                      {{ format_currency(product.price) }}
+                    </span>
+                    {% endif %}
+                  </div>
+
+                  <!-- Stock Status -->
+                  <div class="stock-status mb-2">
+                    {% if product.stock_quantity > 10 %}
+                    <span class="badge bg-success">In Stock</span>
+                    {% elif product.stock_quantity > 0 %}
+                    <span class="badge bg-warning">Only {{ product.stock_quantity }} left</span>
+                    {% else %}
+                    <span class="badge bg-danger">Out of Stock</span>
+                    {% endif %}
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="d-grid gap-2">
+                    <a href="{{ url_for('product_detail', product_id=product.id) }}" 
+                       class="btn btn-outline-teal btn-sm">
+                      <i class="fas fa-eye me-1"></i>View Details
+                    </a>
+                    {% if current_user.is_authenticated %}
+                    <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}">
+                      <button type="submit" class="btn btn-teal btn-sm w-100" 
+                              {% if product.stock_quantity == 0 %}disabled{% endif %}>
+                        <i class="fas fa-cart-plus me-1"></i>
+                        {% if product.stock_quantity == 0 %}Out of Stock{% else %}Add to Cart{% endif %}
+                      </button>
+                    </form>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-teal btn-sm">
+                      <i class="fas fa-sign-in-alt me-1"></i>Login to Buy
+                    </a>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- List View (Hidden by default) -->
+              <div class="product-view-list d-none">
+                <div class="row">
+                  <div class="col-8">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <div class="product-rating mb-2">
+                      {% set avg_rating = product.average_rating or 0 %}
+                      {% for i in range(5) %}
+                        {% if i < avg_rating %}
+                        <i class="fas fa-star text-warning"></i>
+                        {% else %}
+                        <i class="far fa-star text-warning"></i>
+                        {% endif %}
+                      {% endfor %}
+                      <small class="text-muted ms-1">({{ product.review_count or 0 }})</small>
+                    </div>
+                    <p class="card-text text-muted">{{ product.description[:150] }}...</p>
+                    
+                    <!-- Stock Status -->
+                    <div class="stock-status mb-2">
+                      {% if product.stock_quantity > 10 %}
+                      <span class="badge bg-success">In Stock</span>
+                      {% elif product.stock_quantity > 0 %}
+                      <span class="badge bg-warning">Only {{ product.stock_quantity }} left</span>
+                      {% else %}
+                      <span class="badge bg-danger">Out of Stock</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="col-4 text-end">
+                    <div class="product-price mb-3">
+                      {% if product.discounted_price %}
+                      <span class="original-price text-muted d-block">
+                        <del>{{ format_currency(product.price) }}</del>
+                      </span>
+                      <span class="current-price text-teal fw-bold fs-5">
+                        {{ format_currency(product.discounted_price) }}
+                      </span>
+                      {% else %}
+                      <span class="current-price text-teal fw-bold fs-5">
+                        {{ format_currency(product.price) }}
+                      </span>
+                      {% endif %}
+                    </div>
+                    <div class="d-grid gap-2">
+                      <a href="{{ url_for('product_detail', product_id=product.id) }}" 
+                         class="btn btn-outline-teal btn-sm">
+                        <i class="fas fa-eye me-1"></i>Details
+                      </a>
+                      {% if current_user.is_authenticated %}
+                      <form method="POST" action="{{ url_for('add_to_cart', product_id=product.id) }}">
+                        <button type="submit" class="btn btn-teal btn-sm w-100" 
+                                {% if product.stock_quantity == 0 %}disabled{% endif %}>
+                          <i class="fas fa-cart-plus me-1"></i>
+                          {% if product.stock_quantity == 0 %}Out of Stock{% else %}Add to Cart{% endif %}
+                        </button>
+                      </form>
+                      {% else %}
+                      <a href="{{ url_for('login') }}" class="btn btn-teal btn-sm">
+                        <i class="fas fa-sign-in-alt me-1"></i>Login
+                      </a>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+          <div class="text-center py-5">
+            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+            <h3>No products found</h3>
+            <p class="text-muted">
+              Check back later for new products in this category.
+            </p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Load More Button -->
+      <div class="row mt-4" id="loadMoreSection">
+        <div class="col-12 text-center">
+          <button class="btn btn-teal" id="loadMoreBtn">
+            <i class="fas fa-spinner fa-spin d-none me-2"></i>
+            Load More Products
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Comparison Modal -->
+<div class="modal fade" id="comparisonModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Product Comparison</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="comparisonContent">
+        <!-- Comparison content will be loaded here -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Current state
+let currentPage = 1;
+let isLoading = false;
+let selectedProducts = new Set();
+let currentFilters = {
+  priceMin: 0,
+  priceMax: 100000,
+  ratings: [],
+  inStockOnly: false,
+  discounts: []
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  initializeFilters();
+  initializeViewToggle();
+  initializeComparison();
+  initializeWishlist();
+  initializeLoadMore();
+});
+
+// Filter Functions
+function initializeFilters() {
+  // Price Range
+  const priceRange = document.getElementById('priceRange');
+  const priceMin = document.getElementById('priceMin');
+  const priceMax = document.getElementById('priceMax');
+  const priceDisplay = document.getElementById('priceDisplay');
+
+  priceRange.addEventListener('input', function() {
+    currentFilters.priceMax = parseInt(this.value);
+    priceMax.value = currentFilters.priceMax;
+    updatePriceDisplay();
+    applyFilters();
+  });
+
+  priceMin.addEventListener('input', function() {
+    currentFilters.priceMin = parseInt(this.value) || 0;
+    updatePriceDisplay();
+    applyFilters();
+  });
+
+  priceMax.addEventListener('input', function() {
+    currentFilters.priceMax = parseInt(this.value) || 100000;
+    priceRange.value = currentFilters.priceMax;
+    updatePriceDisplay();
+    applyFilters();
+  });
+
+  // Rating Filters
+  document.querySelectorAll('.rating-filter').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      if (this.checked) {
+        currentFilters.ratings.push(parseInt(this.value));
+      } else {
+        currentFilters.ratings = currentFilters.ratings.filter(r => r !== parseInt(this.value));
+      }
+      applyFilters();
+    });
+  });
+
+  // Stock Filter
+  document.getElementById('inStockOnly').addEventListener('change', function() {
+    currentFilters.inStockOnly = this.checked;
+    applyFilters();
+  });
+
+  // Discount Filters
+  document.querySelectorAll('.discount-filter').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      if (this.checked) {
+        currentFilters.discounts.push(parseInt(this.value));
+      } else {
+        currentFilters.discounts = currentFilters.discounts.filter(d => d !== parseInt(this.value));
+      }
+      applyFilters();
+    });
+  });
+
+  // Sort
+  document.getElementById('sortProducts').addEventListener('change', function() {
+    sortProducts(this.value);
+  });
+
+  // Clear Filters
+  document.getElementById('clearFilters').addEventListener('click', function() {
+    clearAllFilters();
+  });
+}
+
+function updatePriceDisplay() {
+  const display = document.getElementById('priceDisplay');
+  display.textContent = `₹${currentFilters.priceMin.toLocaleString()} - ₹${currentFilters.priceMax.toLocaleString()}`;
+}
+
+function applyFilters() {
+  const productItems = document.querySelectorAll('.product-item');
+  let visibleCount = 0;
+
+  productItems.forEach(item => {
+    const price = parseFloat(item.dataset.price);
+    const rating = parseFloat(item.dataset.rating);
+    const discount = parseInt(item.dataset.discount);
+    const stock = parseInt(item.dataset.stock);
+    const name = item.dataset.name.toLowerCase();
+
+    const priceMatch = price >= currentFilters.priceMin && price <= currentFilters.priceMax;
+    const ratingMatch = currentFilters.ratings.length === 0 || currentFilters.ratings.some(r => rating >= r);
+    const stockMatch = !currentFilters.inStockOnly || stock > 0;
+    const discountMatch = currentFilters.discounts.length === 0 || currentFilters.discounts.some(d => discount >= d);
+
+    if (priceMatch && ratingMatch && stockMatch && discountMatch) {
+      item.style.display = 'block';
+      visibleCount++;
+    } else {
+      item.style.display = 'none';
+    }
+  });
+
+  document.getElementById('productCount').textContent = `Showing ${visibleCount} products`;
+}
+
+function sortProducts(sortBy) {
+  const container = document.getElementById('productsContainer');
+  const items = Array.from(container.querySelectorAll('.product-item'));
+
+  items.sort((a, b) => {
+    const priceA = parseFloat(a.dataset.price);
+    const priceB = parseFloat(b.dataset.price);
+    const ratingA = parseFloat(a.dataset.rating);
+    const ratingB = parseFloat(b.dataset.rating);
+    const discountA = parseInt(a.dataset.discount);
+    const discountB = parseInt(b.dataset.discount);
+    const nameA = a.dataset.name.toLowerCase();
+    const nameB = b.dataset.name.toLowerCase();
+
+    switch (sortBy) {
+      case 'price_low':
+        return priceA - priceB;
+      case 'price_high':
+        return priceB - priceA;
+      case 'name':
+        return nameA.localeCompare(nameB);
+      case 'name_desc':
+        return nameB.localeCompare(nameA);
+      case 'rating':
+        return ratingB - ratingA;
+      case 'discount':
+        return discountB - discountA;
+      default:
+        return 0;
+    }
+  });
+
+  items.forEach(item => container.appendChild(item));
+}
+
+function clearAllFilters() {
+  // Reset filter values
+  currentFilters = {
+    priceMin: 0,
+    priceMax: 100000,
+    ratings: [],
+    inStockOnly: false,
+    discounts: []
+  };
+
+  // Reset UI
+  document.getElementById('priceMin').value = '';
+  document.getElementById('priceMax').value = '';
+  document.getElementById('priceRange').value = 100000;
+  document.getElementById('inStockOnly').checked = false;
+  document.querySelectorAll('.rating-filter, .discount-filter').forEach(cb => cb.checked = false);
+  document.getElementById('sortProducts').value = 'featured';
+
+  updatePriceDisplay();
+  applyFilters();
+}
+
+// View Toggle
+function initializeViewToggle() {
+  document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const isListView = this.id === 'listView';
+      document.querySelectorAll('.product-item').forEach(item => {
+        const gridView = item.querySelector('.product-view-grid');
+        const listView = item.querySelector('.product-view-list');
+        
+        if (isListView) {
+          gridView.classList.add('d-none');
+          listView.classList.remove('d-none');
+          item.classList.remove('col-md-6', 'col-xl-4');
+          item.classList.add('col-12');
+        } else {
+          gridView.classList.remove('d-none');
+          listView.classList.add('d-none');
+          item.classList.remove('col-12');
+          item.classList.add('col-md-6', 'col-xl-4');
+        }
+      });
+    });
+  });
+}
+
+// Comparison Functionality
+function initializeComparison() {
+  const basket = document.getElementById('comparisonBasket');
+  const dropdown = document.getElementById('comparisonDropdown');
+  const compareNow = document.getElementById('compareNow');
+  const clearComparison = document.getElementById('clearComparison');
+
+  // Toggle dropdown
+  basket.addEventListener('click', function(e) {
+    e.stopPropagation();
+    dropdown.classList.toggle('show');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function() {
+    dropdown.classList.remove('show');
+  });
+
+  // Add to comparison
+  document.querySelectorAll('.compare-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const productId = this.dataset.productId;
+      
+      if (selectedProducts.has(productId)) {
+        removeFromComparison(productId);
+      } else {
+        if (selectedProducts.size >= 3) {
+          showToast('You can compare up to 3 products only', 'warning');
+          return;
+        }
+        addToComparison(productId, this.dataset);
+      }
+    });
+  });
+
+  // Compare now
+  compareNow.addEventListener('click', function() {
+    if (selectedProducts.size < 2) {
+      showToast('Please select at least 2 products to compare', 'warning');
+      return;
+    }
+    openComparisonModal();
+  });
+
+  // Clear comparison
+  clearComparison.addEventListener('click', function() {
+    selectedProducts.clear();
+    updateComparisonUI();
+  });
+}
+
+function addToComparison(productId, productData) {
+  selectedProducts.add(productId);
+  
+  const comparisonItems = document.getElementById('comparisonItems');
+  const item = document.createElement('div');
+  item.className = 'comparison-item';
+  item.innerHTML = `
+    <img src="${productData.productImage}" alt="${productData.productName}" class="comparison-item-img">
+    <div class="comparison-item-info">
+      <div class="comparison-item-name">${productData.productName}</div>
+      <div class="comparison-item-price">₹${parseFloat(productData.productPrice).toLocaleString()}</div>
+    </div>
+    <button class="btn btn-sm btn-outline-danger comparison-remove" onclick="removeFromComparison('${productId}')">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
+  comparisonItems.appendChild(item);
+
+  // Update button state
+  document.querySelector(`.compare-btn[data-product-id="${productId}"]`).classList.add('active');
+  
+  updateComparisonUI();
+}
+
+function removeFromComparison(productId) {
+  selectedProducts.delete(productId);
+  
+  const item = document.querySelector(`.comparison-item .comparison-remove[onclick="removeFromComparison('${productId}')"]`)?.closest('.comparison-item');
+  if (item) {
+    item.remove();
+  }
+
+  // Update button state
+  document.querySelector(`.compare-btn[data-product-id="${productId}"]`)?.classList.remove('active');
+  
+  updateComparisonUI();
+}
+
+function updateComparisonUI() {
+  const count = selectedProducts.size;
+  document.getElementById('compareCount').textContent = count;
+  document.getElementById('compareNow').disabled = count < 2;
+  
+  const basket = document.getElementById('comparisonBasket');
+  if (count > 0) {
+    basket.classList.add('has-items');
+  } else {
+    basket.classList.remove('has-items');
+  }
+}
+
+function openComparisonModal() {
+  // This would typically fetch detailed product data and populate the comparison table
+  const modalContent = document.getElementById('comparisonContent');
+  modalContent.innerHTML = `
+    <div class="text-center py-4">
+      <i class="fas fa-spinner fa-spin fa-2x text-teal mb-3"></i>
+      <p>Loading comparison...</p>
+    </div>
+  `;
+  
+  const modal = new bootstrap.Modal(document.getElementById('comparisonModal'));
+  modal.show();
+  
+  // Simulate API call
+  setTimeout(() => {
+    modalContent.innerHTML = `
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Features</th>
+              ${Array.from(selectedProducts).map(id => 
+                `<th>${document.querySelector(`.compare-btn[data-product-id="${id}"]`).dataset.productName}</th>`
+              ).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Price</td>
+              ${Array.from(selectedProducts).map(id => 
+                `<td>₹${document.querySelector(`.compare-btn[data-product-id="${id}"]`).dataset.productPrice}</td>`
+              ).join('')}
+            </tr>
+            <tr>
+              <td>Rating</td>
+              ${Array.from(selectedProducts).map(id => 
+                `<td>${document.querySelector(`.product-item[data-price]`).dataset.rating}/5</td>`
+              ).join('')}
+            </tr>
+            <tr>
+              <td>In Stock</td>
+              ${Array.from(selectedProducts).map(id => {
+                const stock = document.querySelector(`.product-item[data-price]`).dataset.stock;
+                return `<td>${stock > 0 ? 'Yes' : 'No'}</td>`;
+              }).join('')}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+  }, 1000);
+}
+
+// Wishlist Functionality
+function initializeWishlist() {
+  document.querySelectorAll('.wishlist-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const productId = this.dataset.productId;
+      const isWishlisted = this.classList.contains('wishlisted');
+      
+      if (isWishlisted) {
+        removeFromWishlist(productId, this);
+      } else {
+        addToWishlist(productId, this);
+      }
+    });
+  });
+}
+
+function addToWishlist(productId, button) {
+  // Show loading state
+  const originalHTML = button.innerHTML;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  button.disabled = true;
+
+  fetch('/add_to_wishlist/' + productId, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      button.classList.add('wishlisted');
+      button.innerHTML = '<i class="fas fa-heart"></i>';
+      button.title = 'Remove from Wishlist';
+      showToast('Product added to wishlist!', 'success');
+      
+      // Update wishlist count in profile if available
+      updateWishlistCount();
+    } else {
+      button.innerHTML = originalHTML;
+      showToast(data.message || 'Failed to add to wishlist', 'error');
+    }
+    button.disabled = false;
+  })
+  .catch(error => {
+    console.error('Error adding to wishlist:', error);
+    button.innerHTML = originalHTML;
+    button.disabled = false;
+    showToast('Failed to add to wishlist. Please try again.', 'error');
+  });
+}
+
+function removeFromWishlist(productId, button) {
+  // Show loading state
+  const originalHTML = button.innerHTML;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  button.disabled = true;
+
+  fetch('/remove_from_wishlist/' + productId, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      button.classList.remove('wishlisted');
+      button.innerHTML = '<i class="far fa-heart"></i>';
+      button.title = 'Add to Wishlist';
+      showToast('Product removed from wishlist!', 'info');
+      
+      // Update wishlist count in profile if available
+      updateWishlistCount();
+    } else {
+      button.innerHTML = originalHTML;
+      showToast(data.message || 'Failed to remove from wishlist', 'error');
+    }
+    button.disabled = false;
+  })
+  .catch(error => {
+    console.error('Error removing from wishlist:', error);
+    button.innerHTML = originalHTML;
+    button.disabled = false;
+    showToast('Failed to remove from wishlist. Please try again.', 'error');
+  });
+}
+
+function updateWishlistCount() {
+  // This function would update a wishlist counter in the navbar or profile
+  // You can implement this based on your UI needs
+  const wishlistCounters = document.querySelectorAll('.wishlist-count');
+  if (wishlistCounters.length > 0) {
+    // You might want to fetch the updated count from the server
+    fetch('/api/wishlist/count')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          wishlistCounters.forEach(counter => {
+            counter.textContent = data.count;
+          });
+        }
+      })
+      .catch(console.error);
+  }
+}
+
+// Load More Functionality
+function initializeLoadMore() {
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  
+  loadMoreBtn.addEventListener('click', function() {
+    if (isLoading) return;
+    
+    loadMoreProducts();
+  });
+}
+
+function loadMoreProducts() {
+  isLoading = true;
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  const spinner = loadMoreBtn.querySelector('.fa-spinner');
+  
+  spinner.classList.remove('d-none');
+  loadMoreBtn.disabled = true;
+  
+  // Simulate API call
+  setTimeout(() => {
+    currentPage++;
+    
+    // In a real app, you would fetch next page from server
+    // For now, we'll just simulate by showing a message
+    if (currentPage >= 3) {
+      loadMoreBtn.innerHTML = '<i class="fas fa-check me-2"></i>All products loaded';
+      loadMoreBtn.disabled = true;
+      loadMoreBtn.classList.remove('btn-teal');
+      loadMoreBtn.classList.add('btn-outline-teal');
+    } else {
+      loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin d-none me-2"></i>Load More Products';
+      loadMoreBtn.disabled = false;
+      showToast(`Loaded page ${currentPage}`, 'info');
+    }
+    
+    spinner.classList.add('d-none');
+    isLoading = false;
+  }, 1000);
+}
+
+// Utility Functions
+function showToast(message, type = 'info') {
+  // Remove existing toasts
+  document.querySelectorAll('.custom-toast').forEach(toast => toast.remove());
+
+  const toast = document.createElement('div');
+  toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info'} alert-dismissible fade show custom-toast`;
+  toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+  toast.innerHTML = `
+    <div class="d-flex align-items-center">
+      <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+      <span>${message}</span>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.remove();
+    }
+  }, 4000);
+}
+
+// Add to Cart AJAX functionality
+document.addEventListener('DOMContentLoaded', function() {
+  // Intercept add to cart form submissions
+  document.querySelectorAll('form[action*="add_to_cart"]').forEach(form => {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      const productId = this.action.split('/').pop();
+      const submitButton = this.querySelector('button[type="submit"]');
+      
+      // Show loading state
+      const originalText = submitButton.innerHTML;
+      submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Adding...';
+      submitButton.disabled = true;
+      
+      fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showToast('Product added to cart!', 'success');
+          // Update cart count
+          if (data.cart_count !== undefined) {
+            updateCartCount(data.cart_count);
+          }
+        } else {
+          showToast('Failed to add product to cart', 'error');
+        }
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+      })
+      .catch(error => {
+        console.error('Error adding to cart:', error);
+        showToast('Failed to add product to cart', 'error');
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+      });
+    });
+  });
+});
+
+function updateCartCount(count) {
+  const cartCountElements = document.querySelectorAll('.cart-count, .cart-badge');
+  cartCountElements.forEach(element => {
+    element.textContent = count;
+  });
+}
+</script>
+
+<style>
+/* Navy Blue & Yellow Color Scheme */
+:root {
+  --navy-blue: #1e3a8a;
+  --navy-dark: #172554;
+  --navy-light: #3b82f6;
+  --bright-yellow: #f59e0b;
+  --yellow-dark: #d97706;
+  --yellow-light: #fbbf24;
+}
+
+.btn-teal {
+  background-color: var(--navy-blue);
+  border-color: var(--navy-blue);
+  color: white;
+}
+
+.btn-teal:hover {
+  background-color: var(--navy-dark);
+  border-color: var(--navy-dark);
+  color: white;
+}
+
+.btn-outline-teal {
+  color: var(--navy-blue);
+  border-color: var(--navy-blue);
+}
+
+.btn-outline-teal:hover {
+  background-color: var(--navy-blue);
+  border-color: var(--navy-blue);
+  color: white;
+}
+
+.bg-teal {
+  background-color: var(--navy-blue) !important;
+}
+
+.text-teal {
+  color: var(--navy-blue) !important;
+}
+
+/* Product Card Enhancements */
+.product-card {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+  position: relative;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(30, 58, 138, 0.15);
+  border-color: var(--navy-blue);
+}
+
+.product-actions {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.wishlist-btn, .compare-btn {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  opacity: 0;
+}
+
+.product-card:hover .wishlist-btn,
+.product-card:hover .compare-btn {
+  opacity: 1;
+}
+
+.wishlist-btn:hover, .compare-btn:hover {
+  background: var(--navy-blue);
+  color: white;
+  border-color: var(--navy-blue);
+}
+
+.wishlist-btn.wishlisted {
+  color: var(--bright-yellow);
+  opacity: 1;
+}
+
+.compare-btn.active {
+  background: var(--navy-blue);
+  color: white;
+  border-color: var(--navy-blue);
+  opacity: 1;
+}
+
+.discount-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--bright-yellow);
+  color: #000;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  z-index: 2;
+}
+
+.product-image-container {
+  height: 200px;
+  overflow: hidden;
+  background: #f8f9fa;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-image {
+  transform: scale(1.05);
+}
+
+/* Filter Card */
+.filter-card {
+  position: sticky;
+  top: 20px;
+}
+
+.filter-title {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--navy-blue);
+}
+
+.filter-section {
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 1rem;
+}
+
+.filter-section:last-child {
+  border-bottom: none;
+}
+
+/* Comparison Basket */
+.comparison-basket {
+  display: inline-block;
+}
+
+.comparison-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 300px;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: none;
+  margin-top: 5px;
+}
+
+.comparison-dropdown.show {
+  display: block;
+}
+
+.comparison-items {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0.75rem;
+}
+
+.comparison-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.comparison-item:last-child {
+  border-bottom: none;
+}
+
+.comparison-item-img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 0.25rem;
+}
+
+.comparison-item-info {
+  flex: 1;
+}
+
+.comparison-item-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.comparison-item-price {
+  font-size: 0.75rem;
+  color: var(--navy-blue);
+  font-weight: bold;
+}
+
+.comparison-actions {
+  padding: 0.75rem;
+  border-top: 1px solid #e9ecef;
+}
+
+/* List View */
+.product-view-list .product-image-container {
+  height: 120px;
+  width: 120px;
+  float: left;
+  margin-right: 1rem;
+}
+
+/* Stock Status Badges */
+.badge.bg-success {
+  background-color: var(--navy-blue) !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .product-actions {
+    opacity: 1;
+  }
+  
+  .comparison-dropdown {
+    width: 280px;
+    right: -50px;
+  }
+  
+  .product-view-list .product-image-container {
+    width: 100%;
+    height: 200px;
+    float: none;
+    margin-right: 0;
+    margin-bottom: 1rem;
+  }
+}
+
+/* Loading States */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Price Range Slider */
+.price-slider .form-range::-webkit-slider-thumb {
+  background: var(--navy-blue);
+}
+
+.price-slider .form-range::-moz-range-thumb {
+  background: var(--navy-blue);
+}
+
+/* Form Controls */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--navy-blue);
+  box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25);
+}
+
+/* Checkbox Styles */
+.form-check-input:checked {
+  background-color: var(--navy-blue);
+  border-color: var(--navy-blue);
+}
+
+/* Additional responsive adjustments */
+@media (max-width: 576px) {
+  .product-card {
+    margin-bottom: 1rem;
+  }
+  
+  .filter-card {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Animation for filter changes */
+.product-item {
+  transition: all 0.3s ease;
+}
+
+/* Comparison basket highlight */
+.comparison-basket.has-items {
+  background-color: var(--bright-yellow);
+  color: #000;
+  border-color: var(--bright-yellow);
+}
+
+/* Wishlist button animation */
+.wishlist-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wishlist-btn.wishlisted {
+  animation: heartBeat 0.6s ease;
+}
+
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.3); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Toast notifications */
+.custom-toast {
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+</style>
+{% endblock %}

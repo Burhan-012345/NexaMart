@@ -1,0 +1,1706 @@
+{% extends "main/base.html" %} {% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('categories') }}">Categories</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a
+          href="{{ url_for('category_products', category_id=product.category_id) }}"
+          >{{ product.category.name }}</a
+        >
+      </li>
+      <li class="breadcrumb-item active">{{ product.name }}</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <!-- Product Images Section -->
+    <div class="col-md-6">
+      <!-- Main Image with Zoom -->
+      <div class="main-image-container mb-3 position-relative">
+        <img
+          src="{{ product.image_url or '/static/images/placeholder.jpg' }}"
+          class="img-fluid rounded main-product-image"
+          alt="{{ product.name }}"
+          id="mainProductImage"
+          data-zoom-image="{{ product.image_url or '/static/images/placeholder.jpg' }}"
+          style="
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            cursor: crosshair;
+          "
+        />
+        <div class="image-zoom-lens" id="zoomLens"></div>
+      </div>
+
+      <!-- Image Gallery -->
+      <div class="image-gallery">
+        <div class="row g-2">
+          {% for i in range(4) %}
+          <div class="col-3">
+            <img
+              src="{{ product.image_url or '/static/images/placeholder.jpg' }}"
+              class="img-fluid rounded gallery-thumbnail {% if loop.first %}active{% endif %}"
+              alt="{{ product.name }} - View {{ loop.index }}"
+              data-image="{{ product.image_url or '/static/images/placeholder.jpg' }}"
+              style="height: 80px; object-fit: cover; cursor: pointer; border: 2px solid {% if loop.first %}#20c997{% else %}#dee2e6{% endif %}"
+              onerror="this.src='/static/images/placeholder.jpg'"
+            />
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- 360° Viewer / Video Preview -->
+      <div class="mt-4">
+        <div class="d-flex gap-2 mb-3">
+          <button
+            class="btn btn-outline-teal btn-sm active"
+            data-viewer="images"
+          >
+            <i class="fas fa-images me-1"></i>Images
+          </button>
+          {% if product.video_url %}
+          <button class="btn btn-outline-teal btn-sm" data-viewer="video">
+            <i class="fas fa-video me-1"></i>Video
+          </button>
+          {% endif %}
+          <button class="btn btn-outline-teal btn-sm" data-viewer="360">
+            <i class="fas fa-sync-alt me-1"></i>360° View
+          </button>
+        </div>
+
+        <!-- Video Preview -->
+        {% if product.video_url %}
+        <div class="viewer-content" id="videoViewer" style="display: none">
+          <div class="ratio ratio-16x9">
+            <video
+              controls
+              class="rounded"
+              poster="{{ product.image_url or '/static/images/placeholder.jpg' }}"
+            >
+              <source src="{{ product.video_url }}" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- 360° Viewer -->
+        <div class="viewer-content" id="360Viewer" style="display: none">
+          <div class="text-center p-4 border rounded bg-light">
+            <i class="fas fa-sync-alt fa-3x text-teal mb-3"></i>
+            <h5>360° Product View</h5>
+            <p class="text-muted">Drag to rotate the product</p>
+            <div
+              class="360-viewer-placeholder rounded"
+              style="
+                height: 200px;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <span class="text-muted">360° Viewer Placeholder</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product Info Section -->
+    <div class="col-md-6">
+      <div class="product-header mb-3">
+        <h1 class="mb-2">{{ product.name }}</h1>
+
+        <!-- Rating Display -->
+        <div class="product-rating mb-3">
+          <div class="d-flex align-items-center">
+            <div class="rating-stars me-2">
+              {% set avg_rating = product.average_rating or 4.2 %} {% for i in
+              range(5) %} {% if i < avg_rating|int %}
+              <i class="fas fa-star text-warning"></i>
+              {% else %}
+              <i class="far fa-star text-warning"></i>
+              {% endif %} {% endfor %}
+            </div>
+            <span class="rating-value fw-bold me-2"
+              >{{ "%.1f"|format(avg_rating) }}</span
+            >
+            <a href="#reviews" class="text-muted reviews-count"
+              >({{ product.review_count or 124 }} reviews)</a
+            >
+            <span class="badge bg-success ms-2">
+              <i class="fas fa-check me-1"></i>Verified
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-muted mb-4 lead">{{ product.description }}</p>
+
+      <!-- Price Section -->
+      <div class="mb-4">
+        {% if product.discounted_price %}
+        <div class="d-flex align-items-center mb-2">
+          <h2 class="text-teal me-3">
+            {{ format_currency(product.discounted_price) }}
+          </h2>
+          <span class="original-price text-muted"
+            ><del>{{ format_currency(product.price) }}</del></span
+          >
+          <span class="badge bg-teal ms-2">
+            Save {{ product.discount_percentage }}%
+          </span>
+        </div>
+        {% else %}
+        <h2 class="text-teal">{{ format_currency(product.price) }}</h2>
+        {% endif %}
+
+        <!-- EMI Option -->
+        <small class="text-muted">
+          <i class="fas fa-credit-card me-1"></i>
+          EMI starts at {{ format_currency((product.current_price / 6)|round)
+          }}/month
+        </small>
+      </div>
+
+      <!-- Stock Status with Alert -->
+      <div class="stock-section mb-4">
+        <div class="d-flex align-items-center mb-2">
+          <span
+            class="badge bg-{{ 'success' if product.stock_quantity > 10 else 'warning' if product.stock_quantity > 0 else 'danger' }} me-2"
+          >
+            <i
+              class="fas fa-{{ 'check' if product.stock_quantity > 0 else 'times' }} me-1"
+            ></i>
+            {{ 'In Stock' if product.stock_quantity > 0 else 'Out of Stock' }}
+          </span>
+          {% if product.stock_quantity > 0 %}
+          <small class="text-muted"
+            >{{ product.stock_quantity }} units available</small
+          >
+          {% endif %}
+        </div>
+
+        <!-- Low Stock Alert -->
+        {% if product.stock_quantity > 0 and product.stock_quantity <= 10 %}
+        <div class="alert alert-warning py-2 mb-0">
+          <small>
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            Only {{ product.stock_quantity }} left in stock - order soon!
+          </small>
+        </div>
+        {% elif product.stock_quantity == 0 %}
+        <div class="alert alert-danger py-2 mb-0">
+          <small>
+            <i class="fas fa-clock me-1"></i>
+            Expected restock in 5-7 days
+          </small>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons mb-4">
+        {% if product.stock_quantity > 0 and current_user.is_authenticated %}
+        <form
+          method="POST"
+          action="{{ url_for('add_to_cart', product_id=product.id) }}"
+          class="mb-3"
+        >
+          <div class="row g-3 align-items-center">
+            <div class="col-auto">
+              <label for="quantity" class="col-form-label fw-bold"
+                >Quantity:</label
+              >
+            </div>
+            <div class="col-auto">
+              <div class="input-group" style="width: 120px">
+                <button
+                  class="btn btn-outline-teal"
+                  type="button"
+                  id="decreaseQty"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  id="quantity"
+                  name="quantity"
+                  class="form-control text-center"
+                  value="1"
+                  min="1"
+                  max="{{ product.stock_quantity }}"
+                />
+                <button
+                  class="btn btn-outline-teal"
+                  type="button"
+                  id="increaseQty"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <div class="col-auto">
+              <button type="submit" class="btn btn-teal btn-lg">
+                <i class="fas fa-cart-plus me-2"></i>Add to Cart
+              </button>
+            </div>
+          </div>
+        </form>
+        {% elif not current_user.is_authenticated %}
+        <a href="{{ url_for('login') }}" class="btn btn-teal btn-lg mb-3">
+          <i class="fas fa-sign-in-alt me-2"></i>Login to Purchase
+        </a>
+        {% endif %}
+
+        <!-- Additional Action Buttons -->
+        <div class="d-flex gap-2 flex-wrap">
+          <button
+            class="btn btn-outline-teal wishlist-btn"
+            data-product-id="{{ product.id }}"
+          >
+            <i class="far fa-heart me-1"></i>Wishlist
+          </button>
+          <button
+            class="btn btn-outline-teal compare-btn"
+            data-product-id="{{ product.id }}"
+          >
+            <i class="fas fa-balance-scale me-1"></i>Compare
+          </button>
+
+          <!-- Social Share -->
+          <div class="dropdown">
+            <button
+              class="btn btn-outline-teal dropdown-toggle"
+              type="button"
+              data-bs-toggle="dropdown"
+            >
+              <i class="fas fa-share-alt me-1"></i>Share
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <a class="dropdown-item" href="#" data-share="facebook"
+                  ><i class="fab fa-facebook me-2 text-primary"></i>Facebook</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" href="#" data-share="twitter"
+                  ><i class="fab fa-twitter me-2 text-info"></i>Twitter</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" href="#" data-share="whatsapp"
+                  ><i class="fab fa-whatsapp me-2 text-success"></i>WhatsApp</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" href="#" data-share="linkedin"
+                  ><i class="fab fa-linkedin me-2 text-primary"></i>LinkedIn</a
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product Features -->
+      <div class="product-features mb-4">
+        <h5 class="mb-3">Key Features:</h5>
+        <ul class="list-unstyled">
+          <li class="mb-2">
+            <i class="fas fa-check text-teal me-2"></i>Free shipping on orders
+            above ₹999
+          </li>
+          <li class="mb-2">
+            <i class="fas fa-check text-teal me-2"></i>7-day return policy
+          </li>
+          <li class="mb-2">
+            <i class="fas fa-check text-teal me-2"></i>1-year warranty
+          </li>
+          <li class="mb-2">
+            <i class="fas fa-check text-teal me-2"></i>Secure payment
+          </li>
+          <li class="mb-2">
+            <i class="fas fa-check text-teal me-2"></i>Cash on delivery
+            available
+          </li>
+        </ul>
+      </div>
+
+      <!-- Delivery Info -->
+      <div class="delivery-info">
+        <div class="card bg-light">
+          <div class="card-body py-3">
+            <div class="row text-center">
+              <div class="col-4">
+                <i class="fas fa-shipping-fast text-teal mb-2"></i>
+                <div class="small">Free Delivery</div>
+                <div class="small fw-bold">Above ₹999</div>
+              </div>
+              <div class="col-4">
+                <i class="fas fa-undo text-teal mb-2"></i>
+                <div class="small">Easy Returns</div>
+                <div class="small fw-bold">7 Days</div>
+              </div>
+              <div class="col-4">
+                <i class="fas fa-shield-alt text-teal mb-2"></i>
+                <div class="small">Warranty</div>
+                <div class="small fw-bold">1 Year</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Details Tabs -->
+  <div class="row mt-5">
+    <div class="col-12">
+      <ul class="nav nav-tabs" id="productTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link active"
+            id="description-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#description"
+          >
+            Description
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            id="specifications-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#specifications"
+          >
+            Specifications
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            id="reviews-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#reviews"
+          >
+            Reviews & Ratings
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            id="qa-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#qa"
+          >
+            Q&A
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content p-4 border border-top-0 rounded-bottom">
+        <!-- Description Tab -->
+        <div class="tab-pane fade show active" id="description" role="tabpanel">
+          <p>{{ product.description }}</p>
+          <div class="row mt-4">
+            <div class="col-md-6">
+              <h5>Key Benefits</h5>
+              <ul>
+                <li>High-quality materials for long-lasting performance</li>
+                <li>Designed for optimal user experience</li>
+                <li>Environmentally friendly manufacturing</li>
+                <li>Comes with complete documentation</li>
+              </ul>
+            </div>
+            <div class="col-md-6">
+              <h5>In the Box</h5>
+              <ul>
+                <li>1 x {{ product.name }}</li>
+                <li>User manual</li>
+                <li>Warranty card</li>
+                <li>Safety instructions</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Specifications Tab -->
+        <div class="tab-pane fade" id="specifications" role="tabpanel">
+          <div class="row">
+            <div class="col-md-6">
+              <table class="table table-striped">
+                <tr>
+                  <td><strong>Category</strong></td>
+                  <td>{{ product.category.name }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Brand</strong></td>
+                  <td>{{ product.brand or 'NexaMart' }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Model</strong></td>
+                  <td>{{ product.model or 'NM-' ~ product.id }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Stock</strong></td>
+                  <td>{{ product.stock_quantity }} units</td>
+                </tr>
+              </table>
+            </div>
+            <div class="col-md-6">
+              <table class="table table-striped">
+                <tr>
+                  <td><strong>Warranty</strong></td>
+                  <td>1 Year</td>
+                </tr>
+                <tr>
+                  <td><strong>Added On</strong></td>
+                  <td>{{ product.created_at.strftime('%d %b, %Y') }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Last Updated</strong></td>
+                  <td>{{ product.updated_at.strftime('%d %b, %Y') }}</td>
+                </tr>
+                <tr>
+                  <td><strong>SKU</strong></td>
+                  <td>NM{{ "%04d"|format(product.id) }}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reviews & Ratings Tab -->
+        <div class="tab-pane fade" id="reviews" role="tabpanel">
+          <div class="row">
+            <div class="col-md-4">
+              <!-- Rating Summary -->
+              <div class="rating-summary text-center p-4 bg-light rounded">
+                <h2 class="text-teal mb-1">
+                  {{ "%.1f"|format(product.average_rating or 4.2) }}/5
+                </h2>
+                <div class="rating-stars mb-2">
+                  {% for i in range(5) %} {% if i < (product.average_rating or
+                  4.2)|int %}
+                  <i class="fas fa-star text-warning"></i>
+                  {% else %}
+                  <i class="far fa-star text-warning"></i>
+                  {% endif %} {% endfor %}
+                </div>
+                <p class="text-muted mb-0">
+                  {{ product.review_count or 124 }} reviews
+                </p>
+              </div>
+
+              <!-- Rating Distribution -->
+              <div class="rating-distribution mt-4">
+                {% for i in range(5, 0, -1) %}
+                <div class="rating-bar d-flex align-items-center mb-2">
+                  <span class="me-2">{{ i }}★</span>
+                  <div class="progress flex-grow-1" style="height: 8px">
+                    <div
+                      class="progress-bar bg-teal"
+                      style="width: {{ [80, 70, 60, 30, 10][5-i] }}%"
+                    ></div>
+                  </div>
+                  <span class="ms-2 text-muted small"
+                    >{{ [80, 70, 60, 30, 10][5-i] }}%</span
+                  >
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="col-md-8">
+              <!-- Add Review Button -->
+              {% if current_user.is_authenticated %}
+              <button
+                class="btn btn-teal mb-4"
+                data-bs-toggle="modal"
+                data-bs-target="#reviewModal"
+              >
+                <i class="fas fa-pen me-1"></i>Write a Review
+              </button>
+              {% else %}
+              <a href="{{ url_for('login') }}" class="btn btn-teal mb-4">
+                <i class="fas fa-sign-in-alt me-1"></i>Login to Review
+              </a>
+              {% endif %}
+
+              <!-- Reviews List -->
+              <div class="reviews-list">
+                {% for review in product.reviews or [] %}
+                <div class="review-item border-bottom pb-4 mb-4">
+                  <div
+                    class="d-flex justify-content-between align-items-start mb-2"
+                  >
+                    <div>
+                      <strong>{{ review.user_name or 'Anonymous' }}</strong>
+                      <div class="rating-stars small">
+                        {% for i in range(5) %} {% if i < review.rating %}
+                        <i class="fas fa-star text-warning"></i>
+                        {% else %}
+                        <i class="far fa-star text-warning"></i>
+                        {% endif %} {% endfor %}
+                      </div>
+                    </div>
+                    <small class="text-muted"
+                      >{{ review.date or '2 days ago' }}</small
+                    >
+                  </div>
+                  <h6 class="mb-2">{{ review.title or 'Great Product!' }}</h6>
+                  <p class="mb-2">
+                    {{ review.comment or 'This product exceeded my expectations.
+                    Highly recommended!' }}
+                  </p>
+                  <div class="review-helpful">
+                    <small class="text-muted">
+                      <button class="btn btn-sm btn-outline-teal me-1">
+                        Helpful ({{ review.helpful or 12 }})
+                      </button>
+                      Report
+                    </small>
+                  </div>
+                </div>
+                {% endfor %}
+
+                <!-- Sample Reviews (fallback) -->
+                {% if not product.reviews %}
+                <div class="review-item border-bottom pb-4 mb-4">
+                  <div
+                    class="d-flex justify-content-between align-items-start mb-2"
+                  >
+                    <div>
+                      <strong>Rajesh Kumar</strong>
+                      <div class="rating-stars small">
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                      </div>
+                    </div>
+                    <small class="text-muted">1 week ago</small>
+                  </div>
+                  <h6 class="mb-2">Excellent quality and fast delivery</h6>
+                  <p class="mb-2">
+                    The product arrived earlier than expected and the quality is
+                    outstanding. Will definitely purchase again!
+                  </p>
+                  <div class="review-helpful">
+                    <small class="text-muted">
+                      <button class="btn btn-sm btn-outline-teal me-1">
+                        Helpful (24)
+                      </button>
+                      Report
+                    </small>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+
+              <!-- Load More Reviews -->
+              <div class="text-center mt-4">
+                <button class="btn btn-outline-teal">
+                  <i class="fas fa-spinner fa-spin d-none me-2"></i>
+                  Load More Reviews
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Q&A Tab -->
+        <div class="tab-pane fade" id="qa" role="tabpanel">
+          <div class="row">
+            <div class="col-12">
+              <!-- Ask Question Button -->
+              {% if current_user.is_authenticated %}
+              <button
+                class="btn btn-teal mb-4"
+                data-bs-toggle="modal"
+                data-bs-target="#questionModal"
+              >
+                <i class="fas fa-question-circle me-1"></i>Ask a Question
+              </button>
+              {% else %}
+              <a href="{{ url_for('login') }}" class="btn btn-teal mb-4">
+                <i class="fas fa-sign-in-alt me-1"></i>Login to Ask Question
+              </a>
+              {% endif %}
+
+              <!-- Questions List -->
+              <div class="questions-list">
+                {% for question in product.questions or [] %}
+                <div class="question-item border-bottom pb-4 mb-4">
+                  <div class="question">
+                    <div
+                      class="d-flex justify-content-between align-items-start mb-2"
+                    >
+                      <strong class="text-teal"
+                        >Q: {{ question.question }}</strong
+                      >
+                      <small class="text-muted"
+                        >{{ question.date or '3 days ago' }}</small
+                      >
+                    </div>
+                    <p class="mb-2">
+                      by {{ question.user_name or 'Anonymous' }}
+                    </p>
+                  </div>
+                  {% if question.answer %}
+                  <div class="answer bg-light p-3 rounded">
+                    <strong class="text-success">A: </strong>
+                    <span>{{ question.answer }}</span>
+                    <div class="mt-2">
+                      <small class="text-muted">
+                        Answered by {{ question.answered_by or 'Seller' }} • {{
+                        question.answer_date or '2 days ago' }}
+                      </small>
+                    </div>
+                  </div>
+                  {% else %}
+                  <div class="alert alert-info py-2 mb-0">
+                    <small>
+                      <i class="fas fa-clock me-1"></i>
+                      Waiting for seller response
+                    </small>
+                  </div>
+                  {% endif %}
+                </div>
+                {% endfor %}
+
+                <!-- Sample Questions (fallback) -->
+                {% if not product.questions %}
+                <div class="question-item border-bottom pb-4 mb-4">
+                  <div class="question">
+                    <div
+                      class="d-flex justify-content-between align-items-start mb-2"
+                    >
+                      <strong class="text-teal"
+                        >Q: What is the warranty period for this
+                        product?</strong
+                      >
+                      <small class="text-muted">1 week ago</small>
+                    </div>
+                    <p class="mb-2">by Priya Sharma</p>
+                  </div>
+                  <div class="answer bg-light p-3 rounded">
+                    <strong class="text-success">A: </strong>
+                    <span
+                      >This product comes with a 1-year manufacturer warranty
+                      from the date of purchase. The warranty covers
+                      manufacturing defects.</span
+                    >
+                    <div class="mt-2">
+                      <small class="text-muted">
+                        Answered by Seller • 5 days ago
+                      </small>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+
+              <!-- Load More Questions -->
+              <div class="text-center mt-4">
+                <button class="btn btn-outline-teal">
+                  <i class="fas fa-spinner fa-spin d-none me-2"></i>
+                  Load More Questions
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Related Products -->
+  <div class="row mt-5">
+    <div class="col-12">
+      <h3 class="mb-4">Customers Also Bought</h3>
+      <div class="row" id="relatedProducts">
+        <!-- Related products will be loaded via JavaScript -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Write a Review</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="reviewForm">
+          <div class="mb-3">
+            <label class="form-label">Rating</label>
+            <div class="rating-input">
+              {% for i in range(5, 0, -1) %}
+              <input
+                type="radio"
+                id="star{{ i }}"
+                name="rating"
+                value="{{ i }}"
+                class="d-none"
+              />
+              <label for="star{{ i }}" class="star-label"
+                ><i class="far fa-star"></i
+              ></label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Review Title</label>
+            <input
+              type="text"
+              class="form-control"
+              name="title"
+              placeholder="Summarize your experience"
+            />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Your Review</label>
+            <textarea
+              class="form-control"
+              name="comment"
+              rows="4"
+              placeholder="Share details of your experience with this product"
+            ></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-teal" id="submitReview">
+          Submit Review
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Question Modal -->
+<div class="modal fade" id="questionModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Ask a Question</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="questionForm">
+          <div class="mb-3">
+            <label class="form-label">Your Question</label>
+            <textarea
+              class="form-control"
+              name="question"
+              rows="4"
+              placeholder="Ask anything about this product..."
+            ></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-teal" id="submitQuestion">
+          Submit Question
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    initializeImageGallery();
+    initializeViewerTabs();
+    initializeQuantityControls();
+    initializeSocialShare();
+    initializeReviewSystem();
+    initializeQASystem();
+    loadRelatedProducts();
+    initializeImageZoom();
+    initializeWishlistButtons();
+  });
+
+  // Image Gallery
+  function initializeImageGallery() {
+    const mainImage = document.getElementById("mainProductImage");
+    const thumbnails = document.querySelectorAll(".gallery-thumbnail");
+
+    thumbnails.forEach((thumb) => {
+      thumb.addEventListener("click", function () {
+        // Update main image
+        mainImage.src = this.dataset.image;
+        mainImage.dataset.zoomImage = this.dataset.image;
+
+        // Update active thumbnail
+        thumbnails.forEach((t) => (t.style.borderColor = "#dee2e6"));
+        this.style.borderColor = "#20c997";
+
+        // Reset zoom
+        resetImageZoom();
+      });
+    });
+  }
+
+  // Image Zoom Functionality
+  function initializeImageZoom() {
+    const mainImage = document.getElementById("mainProductImage");
+    const zoomLens = document.getElementById("zoomLens");
+
+    if (!mainImage || !zoomLens) return;
+
+    mainImage.addEventListener("mousemove", function (e) {
+      const rect = this.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Show zoom lens
+      zoomLens.style.display = "block";
+      zoomLens.style.left = x - 50 + "px";
+      zoomLens.style.top = y - 50 + "px";
+
+      // Calculate zoom (simplified)
+      const zoomLevel = 2;
+      const bgX = -x * zoomLevel + 100;
+      const bgY = -y * zoomLevel + 100;
+
+      zoomLens.style.backgroundImage = `url('${this.dataset.zoomImage}')`;
+      zoomLens.style.backgroundPosition = `${bgX}px ${bgY}px`;
+      zoomLens.style.backgroundSize = `${this.naturalWidth * zoomLevel}px ${
+        this.naturalHeight * zoomLevel
+      }px`;
+    });
+
+    mainImage.addEventListener("mouseleave", function () {
+      zoomLens.style.display = "none";
+    });
+  }
+
+  function resetImageZoom() {
+    const zoomLens = document.getElementById("zoomLens");
+    if (zoomLens) {
+      zoomLens.style.display = "none";
+    }
+  }
+
+  // Viewer Tabs (Images/Video/360)
+  function initializeViewerTabs() {
+    const viewerButtons = document.querySelectorAll("[data-viewer]");
+    const viewerContents = document.querySelectorAll(".viewer-content");
+
+    viewerButtons.forEach((btn) => {
+      btn.addEventListener("click", function () {
+        const viewerType = this.dataset.viewer;
+
+        // Update active button
+        viewerButtons.forEach((b) => b.classList.remove("active"));
+        this.classList.add("active");
+
+        // Show/hide content
+        viewerContents.forEach((content) => (content.style.display = "none"));
+
+        if (viewerType === "images") {
+          // Images are default, hide other viewers
+          document.querySelector(".main-image-container").style.display =
+            "block";
+          document.querySelector(".image-gallery").style.display = "block";
+        } else {
+          document.querySelector(".main-image-container").style.display =
+            "none";
+          document.querySelector(".image-gallery").style.display = "none";
+
+          const targetViewer = document.getElementById(viewerType + "Viewer");
+          if (targetViewer) {
+            targetViewer.style.display = "block";
+          }
+        }
+      });
+    });
+  }
+
+  // Quantity Controls
+  function initializeQuantityControls() {
+    const quantityInput = document.getElementById("quantity");
+    const decreaseBtn = document.getElementById("decreaseQty");
+    const increaseBtn = document.getElementById("increaseQty");
+
+    if (decreaseBtn && increaseBtn && quantityInput) {
+      decreaseBtn.addEventListener("click", function () {
+        const current = parseInt(quantityInput.value);
+        if (current > 1) {
+          quantityInput.value = current - 1;
+        }
+      });
+
+      increaseBtn.addEventListener("click", function () {
+        const current = parseInt(quantityInput.value);
+        const max = parseInt(quantityInput.max);
+        if (current < max) {
+          quantityInput.value = current + 1;
+        }
+      });
+    }
+  }
+
+  // Social Share
+  function initializeSocialShare() {
+    const shareLinks = document.querySelectorAll("[data-share]");
+    const productUrl = window.location.href;
+    const productTitle = document.querySelector("h1").textContent;
+
+    shareLinks.forEach((link) => {
+      link.addEventListener("click", function (e) {
+        e.preventDefault();
+        const platform = this.dataset.share;
+        let shareUrl = "";
+
+        switch (platform) {
+          case "facebook":
+            shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+              productUrl
+            )}`;
+            break;
+          case "twitter":
+            shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+              productTitle
+            )}&url=${encodeURIComponent(productUrl)}`;
+            break;
+          case "whatsapp":
+            shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(
+              productTitle + " " + productUrl
+            )}`;
+            break;
+          case "linkedin":
+            shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
+              productUrl
+            )}`;
+            break;
+        }
+
+        window.open(shareUrl, "_blank", "width=600,height=400");
+      });
+    });
+  }
+
+  // Wishlist Buttons
+  function initializeWishlistButtons() {
+    const wishlistButtons = document.querySelectorAll(".wishlist-btn");
+
+    wishlistButtons.forEach((btn) => {
+      btn.addEventListener("click", function () {
+        const productId = this.dataset.productId;
+        const isWishlisted = this.classList.contains("wishlisted");
+
+        if (isWishlisted) {
+          removeFromWishlist(productId, this);
+        } else {
+          addToWishlist(productId, this);
+        }
+      });
+    });
+  }
+
+  function addToWishlist(productId, button) {
+    // Show loading state
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+
+    fetch("/add_to_wishlist/" + productId, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          button.classList.add("wishlisted");
+          button.innerHTML = '<i class="fas fa-heart"></i>';
+          if (button.querySelector(".btn-text")) {
+            button.querySelector(".btn-text").textContent =
+              "Remove from Wishlist";
+          }
+          showToast("Product added to wishlist!", "success");
+
+          // Update wishlist count
+          updateWishlistCount();
+        } else {
+          button.innerHTML = originalHTML;
+          showToast(data.message || "Failed to add to wishlist", "error");
+        }
+        button.disabled = false;
+      })
+      .catch((error) => {
+        console.error("Error adding to wishlist:", error);
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+        showToast("Failed to add to wishlist. Please try again.", "error");
+      });
+  }
+
+  function removeFromWishlist(productId, button) {
+    // Show loading state
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+
+    fetch("/remove_from_wishlist/" + productId, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          button.classList.remove("wishlisted");
+          button.innerHTML = '<i class="far fa-heart"></i>';
+          if (button.querySelector(".btn-text")) {
+            button.querySelector(".btn-text").textContent = "Add to Wishlist";
+          }
+          showToast("Product removed from wishlist!", "info");
+
+          // Update wishlist count
+          updateWishlistCount();
+        } else {
+          button.innerHTML = originalHTML;
+          showToast(data.message || "Failed to remove from wishlist", "error");
+        }
+        button.disabled = false;
+      })
+      .catch((error) => {
+        console.error("Error removing from wishlist:", error);
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+        showToast("Failed to remove from wishlist. Please try again.", "error");
+      });
+  }
+
+  function updateWishlistCount() {
+    // Update wishlist count in navbar or profile
+    const wishlistCounters = document.querySelectorAll(".wishlist-count");
+    if (wishlistCounters.length > 0) {
+      fetch("/api/wishlist/count")
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            wishlistCounters.forEach((counter) => {
+              counter.textContent = data.count;
+            });
+          }
+        })
+        .catch(console.error);
+    }
+  }
+
+  // Review System
+  function initializeReviewSystem() {
+    // Star rating input
+    const starInputs = document.querySelectorAll(".rating-input input");
+    const starLabels = document.querySelectorAll(".rating-input .star-label");
+
+    starInputs.forEach((input, index) => {
+      input.addEventListener("change", function () {
+        // Update star display
+        starLabels.forEach((label, i) => {
+          if (i < 5 - index) {
+            label.innerHTML = '<i class="fas fa-star text-warning"></i>';
+          } else {
+            label.innerHTML = '<i class="far fa-star text-warning"></i>';
+          }
+        });
+      });
+    });
+
+    // Submit review
+    const submitReviewBtn = document.getElementById("submitReview");
+    if (submitReviewBtn) {
+      submitReviewBtn.addEventListener("click", function () {
+        const form = document.getElementById("reviewForm");
+        const formData = new FormData(form);
+        const rating = formData.get("rating");
+        const title = formData.get("title");
+        const comment = formData.get("comment");
+
+        if (!rating) {
+          showToast("Please select a rating", "warning");
+          return;
+        }
+
+        if (!title || !comment) {
+          showToast("Please fill in all fields", "warning");
+          return;
+        }
+
+        // Simulate API call
+        this.disabled = true;
+        this.innerHTML =
+          '<i class="fas fa-spinner fa-spin me-1"></i>Submitting...';
+
+        setTimeout(() => {
+          const modal = bootstrap.Modal.getInstance(
+            document.getElementById("reviewModal")
+          );
+          modal.hide();
+          showToast("Review submitted successfully!", "success");
+          this.disabled = false;
+          this.innerHTML = "Submit Review";
+          form.reset();
+
+          // Reset stars
+          starLabels.forEach((label) => {
+            label.innerHTML = '<i class="far fa-star text-warning"></i>';
+          });
+        }, 1500);
+      });
+    }
+  }
+
+  // Q&A System
+  function initializeQASystem() {
+    const submitQuestionBtn = document.getElementById("submitQuestion");
+    if (submitQuestionBtn) {
+      submitQuestionBtn.addEventListener("click", function () {
+        const form = document.getElementById("questionForm");
+        const question = form.querySelector("textarea").value;
+
+        if (!question.trim()) {
+          showToast("Please enter your question", "warning");
+          return;
+        }
+
+        // Simulate API call
+        this.disabled = true;
+        this.innerHTML =
+          '<i class="fas fa-spinner fa-spin me-1"></i>Submitting...';
+
+        setTimeout(() => {
+          const modal = bootstrap.Modal.getInstance(
+            document.getElementById("questionModal")
+          );
+          modal.hide();
+          showToast("Question submitted successfully!", "success");
+          this.disabled = false;
+          this.innerHTML = "Submit Question";
+          form.reset();
+        }, 1500);
+      });
+    }
+  }
+
+  // Load Related Products
+  function loadRelatedProducts() {
+    const container = document.getElementById("relatedProducts");
+
+    // Simulate API call to get related products
+    setTimeout(() => {
+      container.innerHTML = `
+      <div class="col-md-3 mb-4">
+        <div class="card product-card h-100">
+          <div class="card-body text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x text-teal mb-3"></i>
+            <p class="text-muted">Loading related products...</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+      // Simulate loaded products
+      setTimeout(() => {
+        container.innerHTML = `
+        ${Array.from(
+          { length: 4 },
+          (_, i) => `
+          <div class="col-md-3 mb-4">
+            <div class="card product-card h-100">
+              <img src="/static/images/placeholder.jpg" class="card-img-top" alt="Related Product" style="height: 200px; object-fit: cover">
+              <div class="card-body">
+                <h6 class="card-title">Related Product ${i + 1}</h6>
+                <div class="text-teal fw-bold">₹${(i + 1) * 1000}</div>
+                <button class="btn btn-teal btn-sm w-100 mt-2">View Details</button>
+              </div>
+            </div>
+          </div>
+        `
+        ).join("")}
+      `;
+      }, 1000);
+    }, 500);
+  }
+
+  // Add to Cart AJAX
+  document.addEventListener("DOMContentLoaded", function () {
+    const addToCartForm = document.querySelector('form[action*="add_to_cart"]');
+    if (addToCartForm) {
+      addToCartForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const productId = this.action.split("/").pop();
+        const submitButton = this.querySelector('button[type="submit"]');
+
+        // Show loading state
+        const originalText = submitButton.innerHTML;
+        submitButton.innerHTML =
+          '<i class="fas fa-spinner fa-spin me-2"></i>Adding...';
+        submitButton.disabled = true;
+
+        fetch(this.action, {
+          method: "POST",
+          body: formData,
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              showToast("Product added to cart!", "success");
+              // Update cart count
+              if (data.cart_count !== undefined) {
+                updateCartCount(data.cart_count);
+              }
+            } else {
+              showToast("Failed to add product to cart", "error");
+            }
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+          })
+          .catch((error) => {
+            console.error("Error adding to cart:", error);
+            showToast("Failed to add product to cart", "error");
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+          });
+      });
+    }
+  });
+
+  function updateCartCount(count) {
+    const cartCountElements = document.querySelectorAll(
+      ".cart-count, .cart-badge"
+    );
+    cartCountElements.forEach((element) => {
+      element.textContent = count;
+    });
+  }
+
+  // Utility Functions
+  function showToast(message, type = "info") {
+    // Remove existing toasts
+    document
+      .querySelectorAll(".custom-toast")
+      .forEach((toast) => toast.remove());
+
+    const toast = document.createElement("div");
+    toast.className = `alert alert-${
+      type === "error"
+        ? "danger"
+        : type === "success"
+        ? "success"
+        : type === "warning"
+        ? "warning"
+        : "info"
+    } alert-dismissible fade show custom-toast`;
+    toast.style.cssText =
+      "position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
+    toast.innerHTML = `
+      <div class="d-flex align-items-center">
+        <i class="fas fa-${
+          type === "success"
+            ? "check-circle"
+            : type === "error"
+            ? "exclamation-triangle"
+            : type === "warning"
+            ? "exclamation-circle"
+            : "info-circle"
+        } me-2"></i>
+        <span>${message}</span>
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 4000);
+  }
+</script>
+
+<style>
+  /* Navy Blue & Yellow Color Scheme */
+  :root {
+    --navy-blue: #1e3a8a;
+    --navy-dark: #172554;
+    --navy-light: #3b82f6;
+    --bright-yellow: #f59e0b;
+    --yellow-dark: #d97706;
+    --yellow-light: #fbbf24;
+  }
+
+  .btn-teal {
+    background-color: var(--navy-blue);
+    border-color: var(--navy-blue);
+    color: white;
+  }
+
+  .btn-teal:hover {
+    background-color: var(--navy-dark);
+    border-color: var(--navy-dark);
+    color: white;
+  }
+
+  .btn-outline-teal {
+    color: var(--navy-blue);
+    border-color: var(--navy-blue);
+  }
+
+  .btn-outline-teal:hover {
+    background-color: var(--navy-blue);
+    border-color: var(--navy-blue);
+    color: white;
+  }
+
+  .bg-teal {
+    background-color: var(--navy-blue) !important;
+  }
+
+  .text-teal {
+    color: var(--navy-blue) !important;
+  }
+
+  /* Image Zoom */
+  .main-image-container {
+    position: relative;
+  }
+
+  .image-zoom-lens {
+    position: absolute;
+    border: 2px solid var(--navy-blue);
+    width: 100px;
+    height: 100px;
+    background: white;
+    background-repeat: no-repeat;
+    display: none;
+    pointer-events: none;
+    z-index: 100;
+    border-radius: 4px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Rating Stars */
+  .rating-stars {
+    display: inline-flex;
+    gap: 2px;
+  }
+
+  .rating-input {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: 5px;
+  }
+
+  .star-label {
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: var(--bright-yellow);
+    transition: color 0.2s;
+  }
+
+  .rating-input input:checked ~ .star-label,
+  .star-label:hover,
+  .star-label:hover ~ .star-label {
+    color: var(--bright-yellow);
+  }
+
+  .rating-input input:checked + .star-label {
+    color: var(--bright-yellow);
+  }
+
+  /* Review and Q&A Items */
+  .review-item,
+  .question-item {
+    transition: background-color 0.2s;
+  }
+
+  .review-item:hover,
+  .question-item:hover {
+    background-color: #f8f9fa;
+  }
+
+  /* Progress Bars */
+  .progress {
+    background-color: #e9ecef;
+  }
+
+  .progress-bar {
+    background-color: var(--navy-blue);
+  }
+
+  /* Social Share Dropdown */
+  .dropdown-menu .dropdown-item:hover {
+    background-color: #e8f1ff;
+  }
+
+  /* Quantity Input Group */
+  .input-group .btn {
+    padding: 0.375rem 0.75rem;
+  }
+
+  /* Tab Enhancements */
+  .nav-tabs .nav-link {
+    color: #6c757d;
+    border: none;
+    padding: 1rem 1.5rem;
+  }
+
+  .nav-tabs .nav-link.active {
+    color: var(--navy-blue);
+    border-bottom: 3px solid var(--navy-blue);
+    background: none;
+  }
+
+  /* Product Card Hover */
+  .product-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #e9ecef;
+  }
+
+  .product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(30, 58, 138, 0.15);
+  }
+
+  /* Viewer Tabs */
+  .viewer-content {
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Stock Alert Animations */
+  .alert-warning {
+    border-left: 4px solid var(--bright-yellow);
+    background-color: #fef3c7;
+    border-color: var(--bright-yellow);
+    color: #92400e;
+  }
+
+  .alert-danger {
+    border-left: 4px solid #dc3545;
+  }
+
+  /* Delivery Info Cards */
+  .delivery-info .card {
+    border: 1px solid #e8f1ff;
+  }
+
+  /* Loading States */
+  .fa-spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Badge Enhancements */
+  .badge {
+    font-weight: 500;
+  }
+
+  .bg-teal {
+    background-color: var(--navy-blue) !important;
+  }
+
+  /* Form Enhancements */
+  .form-control:focus {
+    border-color: var(--navy-blue);
+    box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25);
+  }
+
+  /* Gallery thumbnail active state */
+  .gallery-thumbnail.active {
+    border-color: var(--navy-blue) !important;
+  }
+
+  /* Product features checkmarks */
+  .product-features .fa-check {
+    color: var(--bright-yellow);
+  }
+
+  /* Delivery info icons */
+  .delivery-info .fa-shipping-fast,
+  .delivery-info .fa-undo,
+  .delivery-info .fa-shield-alt {
+    color: var(--navy-blue);
+  }
+
+  /* Question text color */
+  .question .text-teal {
+    color: var(--navy-blue) !important;
+  }
+
+  /* Answer background */
+  .answer {
+    background-color: #f8f9fa !important;
+  }
+
+  /* Breadcrumb styling */
+  .breadcrumb-item.active {
+    color: var(--navy-blue);
+    font-weight: 500;
+  }
+
+  /* Price styling */
+  .original-price {
+    color: #6c757d;
+  }
+
+  .current-price {
+    color: var(--navy-blue);
+  }
+
+  /* Modal enhancements */
+  .modal-header {
+    background-color: var(--navy-blue);
+    color: white;
+  }
+
+  /* Toast notifications */
+  .custom-toast {
+    animation: slideInRight 0.3s ease;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Wishlist button states */
+  .wishlist-btn.wishlisted {
+    color: var(--bright-yellow);
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .main-product-image {
+      height: 300px !important;
+    }
+
+    .action-buttons .d-flex {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .action-buttons .btn {
+      width: 100%;
+    }
+
+    .image-zoom-lens {
+      display: none !important;
+    }
+
+    .nav-tabs .nav-link {
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+    }
+  }
+
+  /* Additional mobile optimizations */
+  @media (max-width: 576px) {
+    .product-header h1 {
+      font-size: 1.5rem;
+    }
+
+    .product-price h2 {
+      font-size: 1.75rem;
+    }
+
+    .tab-content {
+      padding: 1rem !important;
+    }
+  }
+
+  /* Hover effects for interactive elements */
+  .wishlist-btn:hover,
+  .compare-btn:hover {
+    background-color: var(--navy-blue);
+    color: white;
+  }
+
+  /* Rating distribution bars */
+  .rating-bar .progress-bar {
+    background: linear-gradient(90deg, var(--navy-blue), var(--navy-light));
+  }
+
+  /* 360 viewer placeholder */
+  .360-viewer-placeholder {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  }
+
+  /* Related products section */
+  #relatedProducts .product-card {
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+  }
+
+  #relatedProducts .product-card:hover {
+    border-color: var(--navy-blue);
+  }
+</style>
+{% endblock %}

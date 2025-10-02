@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Orders - E-Commerce Store</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --navy-blue: #001f3f;
+        --navy-blue-dark: #001a35;
+        --navy-blue-light: #003366;
+        --navy-blue-very-light: #e6f0f9;
+        --bright-yellow: #ffd700;
+        --bright-yellow-dark: #e6c200;
+        --bright-yellow-light: #ffe44d;
+        --white: #ffffff;
+        --light-gray: #f8f9fa;
+        --dark-gray: #343a40;
+      }
+
+      body {
+        background-color: #f5f7fa;
+      }
+
+      .order-card {
+        border: 2px solid var(--navy-blue-very-light);
+        border-radius: 15px;
+        margin-bottom: 25px;
+        transition: all 0.3s ease;
+        background: var(--white);
+        overflow: hidden;
+      }
+
+      .order-card:hover {
+        box-shadow: 0 8px 25px rgba(0, 31, 63, 0.15);
+        border-color: var(--navy-blue-light);
+        transform: translateY(-3px);
+      }
+
+      .order-header {
+        background: linear-gradient(
+          135deg,
+          var(--navy-blue),
+          var(--navy-blue-dark)
+        );
+        padding: 20px;
+        color: var(--white);
+        border-bottom: 3px solid var(--bright-yellow);
+      }
+
+      .order-items {
+        padding: 25px;
+        background: var(--white);
+      }
+
+      .order-item {
+        display: flex;
+        align-items: center;
+        padding: 20px 0;
+        border-bottom: 2px dashed var(--navy-blue-very-light);
+        transition: background-color 0.3s ease;
+      }
+
+      .order-item:hover {
+        background-color: var(--navy-blue-very-light);
+      }
+
+      .order-item:last-child {
+        border-bottom: none;
+      }
+
+      .item-image {
+        width: 90px;
+        height: 90px;
+        object-fit: cover;
+        border-radius: 10px;
+        margin-right: 20px;
+        border: 2px solid var(--navy-blue-very-light);
+      }
+
+      .status-badge {
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .status-pending {
+        background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+        color: #856404;
+        border: 1px solid #ffeaa7;
+      }
+      .status-confirmed {
+        background: linear-gradient(135deg, #d1ecf1, #b8e6f1);
+        color: #0c5460;
+        border: 1px solid #b8e6f1;
+      }
+      .status-shipped {
+        background: linear-gradient(135deg, #d1e7ff, #b8d4ff);
+        color: #004085;
+        border: 1px solid #b8d4ff;
+      }
+      .status-delivered {
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .status-cancelled {
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .order-actions {
+        padding: 20px;
+        background: linear-gradient(
+          135deg,
+          var(--navy-blue-very-light),
+          var(--white)
+        );
+        border-top: 3px solid var(--navy-blue-very-light);
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        color: var(--navy-blue-dark);
+        background: var(--white);
+        border-radius: 15px;
+        border: 3px dashed var(--navy-blue-very-light);
+      }
+
+      .empty-state i {
+        font-size: 5rem;
+        margin-bottom: 25px;
+        color: var(--navy-blue-light);
+        opacity: 0.7;
+      }
+
+      .filter-buttons {
+        margin-bottom: 30px;
+        padding: 20px;
+        background: var(--white);
+        border-radius: 15px;
+        border: 2px solid var(--navy-blue-very-light);
+      }
+
+      .filter-btn {
+        border: 2px solid var(--navy-blue);
+        color: var(--navy-blue);
+        font-weight: 600;
+        margin: 5px;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+      }
+
+      .filter-btn:hover {
+        background: var(--navy-blue-very-light);
+        border-color: var(--navy-blue-dark);
+      }
+
+      .filter-btn.active {
+        background: linear-gradient(
+          135deg,
+          var(--navy-blue),
+          var(--navy-blue-dark)
+        );
+        color: var(--white);
+        border-color: var(--navy-blue-dark);
+        transform: scale(1.05);
+      }
+
+      .btn-outline-secondary {
+        border-color: var(--navy-blue);
+        color: var(--navy-blue);
+      }
+
+      .btn-outline-secondary:hover {
+        background: var(--navy-blue);
+        border-color: var(--navy-blue);
+        color: var(--white);
+      }
+
+      .btn-outline-danger {
+        border-color: #dc3545;
+        color: #dc3545;
+      }
+
+      .btn-outline-danger:hover {
+        background: #dc3545;
+        border-color: #dc3545;
+        color: var(--white);
+      }
+
+      .btn-outline-success {
+        border-color: #28a745;
+        color: #28a745;
+      }
+
+      .btn-outline-success:hover {
+        background: #28a745;
+        border-color: #28a745;
+        color: var(--white);
+      }
+
+      .btn-primary {
+        background: linear-gradient(
+          135deg,
+          var(--navy-blue),
+          var(--navy-blue-dark)
+        );
+        border-color: var(--navy-blue);
+      }
+
+      .btn-primary:hover {
+        background: var(--navy-blue-dark);
+        border-color: var(--navy-blue-dark);
+      }
+
+      .btn-warning {
+        background: linear-gradient(
+          135deg,
+          var(--bright-yellow),
+          var(--bright-yellow-dark)
+        );
+        border-color: var(--bright-yellow);
+        color: var(--navy-blue);
+      }
+
+      .btn-warning:hover {
+        background: var(--bright-yellow-dark);
+        border-color: var(--bright-yellow-dark);
+        color: var(--navy-blue);
+      }
+
+      .order-total {
+        background: linear-gradient(
+          135deg,
+          var(--navy-blue),
+          var(--navy-blue-dark)
+        );
+        color: var(--white);
+        padding: 15px;
+        border-radius: 10px;
+        font-weight: bold;
+        font-size: 1.2rem;
+      }
+
+      .order-meta {
+        background: var(--navy-blue-very-light);
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 4px solid var(--navy-blue);
+      }
+
+      .badge.bg-primary {
+        background: linear-gradient(
+          135deg,
+          var(--navy-blue),
+          var(--navy-blue-dark)
+        ) !important;
+      }
+
+      .navbar-dark.bg-dark {
+        background-color: var(--navy-blue) !important;
+      }
+
+      .feature-badge {
+        background-color: var(--bright-yellow);
+        color: var(--navy-blue);
+        font-weight: bold;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.8rem;
+      }
+
+      .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 15px;
+      }
+
+      .review-section {
+        margin-top: 15px;
+        padding: 15px;
+        background-color: var(--navy-blue-very-light);
+        border-radius: 10px;
+        border-left: 4px solid var(--bright-yellow);
+      }
+
+      .review-stars {
+        color: var(--bright-yellow);
+        font-size: 1.2rem;
+        margin-bottom: 10px;
+      }
+
+      .review-form {
+        display: none;
+      }
+
+      @media (max-width: 768px) {
+        .order-item {
+          flex-direction: column;
+          text-align: center;
+        }
+
+        .item-image {
+          margin-right: 0;
+          margin-bottom: 15px;
+        }
+
+        .filter-buttons {
+          text-align: center;
+        }
+
+        .order-header h5 {
+          font-size: 1.1rem;
+        }
+
+        .action-buttons {
+          justify-content: center;
+        }
+        /* Add these styles to your existing CSS */
+        .item-image {
+          width: 90px;
+          height: 90px;
+          object-fit: cover;
+          border-radius: 10px;
+          margin-right: 20px;
+          border: 2px solid var(--navy-blue-very-light);
+          background-color: #f8f9fa; /* Fallback background */
+          font-size: 10px; /* For alt text */
+          color: #6c757d; /* For alt text */
+        }
+
+        /* Better placeholder styling */
+        .item-image:before {
+          content: "No Image";
+          display: block;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          color: #6c757d;
+          font-size: 10px;
+          text-align: center;
+        }
+
+        /* Ensure images don't stretch */
+        .item-image {
+          flex-shrink: 0;
+        }
+
+        /* Add loading state */
+        .item-image.loading {
+          background: linear-gradient(
+            90deg,
+            #f0f0f0 25%,
+            #e0e0e0 50%,
+            #f0f0f0 75%
+          );
+          background-size: 200% 100%;
+          animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+          0% {
+            background-position: 200% 0;
+          }
+          100% {
+            background-position: -200% 0;
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container">
+        <a class="navbar-brand" href="{{ url_for('index') }}">NexaMart</a>
+        <div class="navbar-nav ms-auto">
+          <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+          <a class="nav-link" href="{{ url_for('categories') }}">Categories</a>
+          <a class="nav-link" href="{{ url_for('cart') }}">Cart</a>
+          <a class="nav-link active" href="{{ url_for('orders') }}"
+            >My Orders</a
+          >
+          <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
+          <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container my-5">
+      <div class="row">
+        <div class="col-12">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-shopping-bag me-2"></i>My Orders</h1>
+            <span class="badge bg-primary">{{ orders|length }} order(s)</span>
+          </div>
+
+          <!-- Filter Buttons -->
+          <div class="filter-buttons">
+            <button
+              class="btn btn-outline-primary btn-sm filter-btn active"
+              data-filter="all"
+            >
+              All Orders
+            </button>
+            <button
+              class="btn btn-outline-primary btn-sm filter-btn"
+              data-filter="pending"
+            >
+              Pending
+            </button>
+            <button
+              class="btn btn-outline-primary btn-sm filter-btn"
+              data-filter="confirmed"
+            >
+              Confirmed
+            </button>
+            <button
+              class="btn btn-outline-primary btn-sm filter-btn"
+              data-filter="shipped"
+            >
+              Shipped
+            </button>
+            <button
+              class="btn btn-outline-primary btn-sm filter-btn"
+              data-filter="delivered"
+            >
+              Delivered
+            </button>
+            <button
+              class="btn btn-outline-primary btn-sm filter-btn"
+              data-filter="cancelled"
+            >
+              Cancelled
+            </button>
+          </div>
+
+          {% if orders %} {% for order in orders|sort(attribute='created_at',
+          reverse=true) %}
+          <div class="order-card" data-status="{{ order.status }}">
+            <div class="order-header">
+              <div class="row align-items-center">
+                <div class="col-md-6">
+                  <h5 class="mb-1">Order #{{ order.order_id }}</h5>
+                  <small class="text-muted"
+                    >Placed on {{ order.created_at.strftime('%B %d, %Y at %I:%M
+                    %p') }}</small
+                  >
+                </div>
+                <div class="col-md-3">
+                  <span
+                    class="status-badge {{ order.get_status_badge_class() }}"
+                  >
+                    {{ order.get_status_display() }}
+                  </span>
+                </div>
+                <div class="col-md-3 text-md-end">
+                  <strong>{{ format_currency(order.total_amount) }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Replace the entire order-item section with this fixed version -->
+            <div class="order-items">
+              {% for item in order.items %}
+              <div class="order-item">
+                <img
+                  src="{% if item.product and item.product.image_url %}{{ item.product.image_url }}{% else %}{{ url_for('static', filename='images/placeholder.jpg') }}{% endif %}"
+                  alt="{{ item.product.name if item.product else 'Product' }}"
+                  class="item-image"
+                  onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/placeholder.jpg') }}'"
+                />
+                <div class="flex-grow-1">
+                  <h6 class="mb-1">
+                    {{ item.product.name if item.product else "Product" }}
+                  </h6>
+                  <p class="text-muted mb-1">Quantity: {{ item.quantity }}</p>
+                  <p class="mb-0">{{ format_currency(item.price) }} each</p>
+
+                  <!-- Review section for delivered items -->
+                  {% if order.status == 'delivered' %}
+                  <div class="review-section">
+                    <div
+                      class="d-flex justify-content-between align-items-center"
+                    >
+                      <h6 class="mb-0">Rate this product</h6>
+                      <span class="feature-badge">NEW</span>
+                    </div>
+                    <div class="review-stars">
+                      <i class="far fa-star" data-rating="1"></i>
+                      <i class="far fa-star" data-rating="2"></i>
+                      <i class="far fa-star" data-rating="3"></i>
+                      <i class="far fa-star" data-rating="4"></i>
+                      <i class="far fa-star" data-rating="5"></i>
+                    </div>
+                    <div class="review-form" id="review-form-{{ item.id }}">
+                      <textarea
+                        class="form-control mb-2"
+                        rows="3"
+                        placeholder="Write your review..."
+                      ></textarea>
+                      <button
+                        class="btn btn-warning btn-sm submit-review"
+                        data-item-id="{{ item.id }}"
+                      >
+                        <i class="fas fa-paper-plane"></i> Submit Review
+                      </button>
+                    </div>
+                    <button
+                      class="btn btn-outline-primary btn-sm write-review"
+                      data-item-id="{{ item.id }}"
+                    >
+                      <i class="fas fa-edit"></i> Write Review
+                    </button>
+                  </div>
+                  {% endif %}
+                </div>
+                <div class="text-end">
+                  <strong>{{ format_currency(item.subtotal) }}</strong>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+
+            <div class="order-actions">
+              <div class="row align-items-center">
+                <div class="col-md-6">
+                  <small class="text-muted">
+                    {{ order.items|length }} item(s) • {% if
+                    order.tracking_number %} Tracking: {{ order.tracking_number
+                    }} {% endif %}
+                  </small>
+                </div>
+                <div class="col-md-6 text-md-end">
+                  <div class="action-buttons">
+                    <a
+                      href="{{ url_for('print_receipt', order_id=order.id) }}"
+                      class="btn btn-outline-secondary btn-sm"
+                      target="_blank"
+                    >
+                      <i class="fas fa-receipt"></i> Receipt
+                    </a>
+                    <button
+                      class="btn btn-outline-secondary btn-sm download-invoice"
+                      data-order-id="{{ order.id }}"
+                    >
+                      <i class="fas fa-file-pdf"></i> Download Invoice
+                    </button>
+                    {% if order.can_cancel() %}
+                    <button
+                      class="btn btn-outline-danger btn-sm cancel-order"
+                      data-order-id="{{ order.id }}"
+                    >
+                      <i class="fas fa-times"></i> Cancel Order
+                    </button>
+                    {% endif %} {% if order.status == 'delivered' %}
+                    <button
+                      class="btn btn-warning btn-sm reorder-btn"
+                      data-order-id="{{ order.id }}"
+                    >
+                      <i class="fas fa-redo"></i> Reorder
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %} {% else %}
+          <div class="empty-state">
+            <i class="fas fa-shopping-bag"></i>
+            <h3>No Orders Yet</h3>
+            <p class="mb-4">
+              You haven't placed any orders yet. Start shopping to see your
+              orders here!
+            </p>
+            <a href="{{ url_for('categories') }}" class="btn btn-primary">
+              <i class="fas fa-shopping-cart"></i> Start Shopping
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Filter orders by status
+      document.querySelectorAll(".filter-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          // Update active button
+          document
+            .querySelectorAll(".filter-btn")
+            .forEach((b) => b.classList.remove("active"));
+          this.classList.add("active");
+
+          const filter = this.getAttribute("data-filter");
+          const orderCards = document.querySelectorAll(".order-card");
+
+          orderCards.forEach((card) => {
+            if (
+              filter === "all" ||
+              card.getAttribute("data-status") === filter
+            ) {
+              card.style.display = "block";
+            } else {
+              card.style.display = "none";
+            }
+          });
+        });
+      });
+
+      // Cancel order functionality
+      document.querySelectorAll(".cancel-order").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const orderId = this.getAttribute("data-order-id");
+          if (confirm("Are you sure you want to cancel this order?")) {
+            fetch(`/cancel_order/${orderId}`, {
+              method: "POST",
+              headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.success) {
+                  alert(data.message);
+                  location.reload();
+                } else {
+                  alert(data.message);
+                }
+              })
+              .catch((error) => {
+                console.error("Error:", error);
+                alert("An error occurred while cancelling the order.");
+              });
+          }
+        });
+      });
+
+      // Download invoice functionality
+      document.querySelectorAll(".download-invoice").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const orderId = this.getAttribute("data-order-id");
+
+          // Show loading state
+          const originalText = this.innerHTML;
+          this.innerHTML =
+            '<i class="fas fa-spinner fa-spin"></i> Generating...';
+
+          fetch(`/download_invoice/${orderId}`, {
+            method: "GET",
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          })
+            .then((response) => {
+              if (response.ok) {
+                return response.blob();
+              }
+              throw new Error("Network response was not ok.");
+            })
+            .then((blob) => {
+              // Create a URL for the blob
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.style.display = "none";
+              a.href = url;
+              a.download = `invoice-${orderId}.pdf`;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+
+              // Restore button text
+              this.innerHTML = originalText;
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("An error occurred while generating the invoice.");
+              this.innerHTML = originalText;
+            });
+        });
+      });
+
+      // Reorder functionality
+      document.querySelectorAll(".reorder-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const orderId = this.getAttribute("data-order-id");
+
+          if (confirm("Add all items from this order to your cart?")) {
+            fetch(`/reorder/${orderId}`, {
+              method: "POST",
+              headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.success) {
+                  alert(data.message);
+                  // Optionally redirect to cart page
+                  window.location.href = "{{ url_for('cart') }}";
+                } else {
+                  alert(data.message);
+                }
+              })
+              .catch((error) => {
+                console.error("Error:", error);
+                alert("An error occurred while reordering.");
+              });
+          }
+        });
+      });
+
+      // Review functionality
+      document.querySelectorAll(".write-review").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const itemId = this.getAttribute("data-item-id");
+          const reviewForm = document.getElementById(`review-form-${itemId}`);
+          reviewForm.style.display = "block";
+          this.style.display = "none";
+        });
+      });
+
+      // Star rating functionality
+      document.querySelectorAll(".review-stars i").forEach((star) => {
+        star.addEventListener("click", function () {
+          const rating = this.getAttribute("data-rating");
+          const stars = this.parentElement.querySelectorAll("i");
+
+          // Update stars display
+          stars.forEach((s, index) => {
+            if (index < rating) {
+              s.classList.remove("far");
+              s.classList.add("fas");
+            } else {
+              s.classList.remove("fas");
+              s.classList.add("far");
+            }
+          });
+        });
+      });
+
+      // Submit review functionality
+      document.querySelectorAll(".submit-review").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const itemId = this.getAttribute("data-item-id");
+          const reviewForm = document.getElementById(`review-form-${itemId}`);
+          const textarea = reviewForm.querySelector("textarea");
+          const stars = reviewForm.parentElement.querySelectorAll(
+            ".review-stars i.fas"
+          );
+
+          if (stars.length === 0) {
+            alert("Please select a rating before submitting your review.");
+            return;
+          }
+
+          const rating = stars.length;
+          const reviewText = textarea.value.trim();
+
+          if (reviewText === "") {
+            alert("Please write a review before submitting.");
+            return;
+          }
+
+          // Show loading state
+          const originalText = this.innerHTML;
+          this.innerHTML =
+            '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+          fetch(`/submit_review/${itemId}`, {
+            method: "POST",
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              rating: rating,
+              review: reviewText,
+            }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                alert("Thank you for your review!");
+                reviewForm.style.display = "none";
+                const writeReviewBtn =
+                  reviewForm.parentElement.querySelector(".write-review");
+                writeReviewBtn.style.display = "block";
+                writeReviewBtn.disabled = true;
+                writeReviewBtn.innerHTML =
+                  '<i class="fas fa-check"></i> Review Submitted';
+              } else {
+                alert(data.message);
+                this.innerHTML = originalText;
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("An error occurred while submitting your review.");
+              this.innerHTML = originalText;
+            });
+        });
+      });
+
+      // Add CSRF token for forms (if needed)
+      function getCSRFToken() {
+        return (
+          document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content") || ""
+        );
+      }
+    </script>
+  </body>
+</html>

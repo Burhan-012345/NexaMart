@@ -1,0 +1,608 @@
+{% extends "main/base.html" %} {% block title %}Categories{% endblock %} {%
+block content %}
+<div class="container py-5">
+  <!-- Category Banner -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div
+        class="category-banner bg-primary text-white rounded p-5 position-relative"
+      >
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <h1 class="display-5 fw-bold mb-3">Shop by Category</h1>
+            <p class="lead mb-0">
+              Discover amazing products across all categories. Find exactly what
+              you're looking for with our advanced filters.
+            </p>
+          </div>
+          <div class="col-md-4 text-center">
+            <i class="fas fa-layer-group fa-4x opacity-75"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filter Bar -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="row g-3 align-items-center">
+            <!-- Search -->
+            <div class="col-md-4">
+              <div class="input-group">
+                <span class="input-group-text"
+                  ><i class="fas fa-search"></i
+                ></span>
+                <input
+                  type="text"
+                  id="categorySearch"
+                  class="form-control"
+                  placeholder="Search categories..."
+                />
+              </div>
+            </div>
+
+            <!-- Sort Options -->
+            <div class="col-md-4">
+              <select class="form-select" id="sortCategories">
+                <option value="name">Sort by: Name A-Z</option>
+                <option value="name_desc">Sort by: Name Z-A</option>
+                <option value="products_high">Most Products First</option>
+                <option value="products_low">Fewest Products First</option>
+              </select>
+            </div>
+
+            <!-- View Toggle -->
+            <div class="col-md-4">
+              <div class="btn-group w-100" role="group">
+                <input
+                  type="radio"
+                  class="btn-check"
+                  name="viewMode"
+                  id="gridView"
+                  autocomplete="off"
+                  checked
+                />
+                <label class="btn btn-outline-primary" for="gridView">
+                  <i class="fas fa-th-large"></i> Grid
+                </label>
+                <input
+                  type="radio"
+                  class="btn-check"
+                  name="viewMode"
+                  id="listView"
+                  autocomplete="off"
+                />
+                <label class="btn btn-outline-primary" for="listView">
+                  <i class="fas fa-list"></i> List
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Stats -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="category-stats">
+        <div class="row g-3">
+          <div class="col-md-3 col-6">
+            <div class="stat-card text-center p-3 bg-light rounded">
+              <h4 class="text-primary mb-1">{{ total_products }}</h4>
+              <small class="text-muted">Total Products</small>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="stat-card text-center p-3 bg-light rounded">
+              <h4 class="text-primary mb-1">{{ categories|length }}</h4>
+              <small class="text-muted">Categories</small>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="stat-card text-center p-3 bg-light rounded">
+              <h4 class="text-primary mb-1">{{ active_categories }}</h4>
+              <small class="text-muted">Active Categories</small>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="stat-card text-center p-3 bg-light rounded">
+              <h4 class="text-primary mb-1">{{ featured_products_count }}</h4>
+              <small class="text-muted">Featured Items</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Categories Grid -->
+  <div class="row" id="categoriesContainer">
+    {% for category in categories %}
+    <div
+      class="col-md-6 col-lg-4 mb-4 category-item"
+      data-name="{{ category.name|lower }}"
+      data-products="{{ category.product_count }}"
+    >
+      <div class="card category-card h-100 text-center">
+        <div class="category-badge">
+          <span class="badge bg-primary"
+            >{{ category.product_count }} products</span
+          >
+        </div>
+        <div class="category-image position-relative">
+          {% if category.image_url %}
+          <img
+            src="{{ category.image_url }}"
+            class="card-img-top category-img"
+            alt="{{ category.name }}"
+            loading="lazy"
+            onerror="handleImageError(this)"
+          />
+          {% else %}
+          <div class="category-placeholder">
+            <i
+              class="fas fa-{{ 
+              'mobile-alt' if category.name == 'Electronics' else
+              'tshirt' if category.name == 'Fashion' else
+              'home' if category.name == 'Home & Kitchen' else
+              'book' if category.name == 'Books' else
+              'spa' if category.name == 'Beauty' else
+              'futbol' if category.name == 'Sports' else
+              'gamepad' if category.name == 'Toys' else
+              'car' if category.name == 'Automotive' else
+              'gem' if category.name == 'Jewelry' else
+              'heartbeat' if category.name == 'Health' else
+              'shopping-bag'
+            }} fa-3x text-muted"
+            ></i>
+          </div>
+          {% endif %}
+        </div>
+        <div class="card-body d-flex flex-column">
+          <h3 class="card-title">{{ category.name }}</h3>
+          <p class="card-text text-muted flex-grow-1">
+            {{ category.description }}
+          </p>
+
+          <!-- Category Stats -->
+          <div class="category-meta mb-3">
+            <div class="row text-center g-2">
+              <div class="col-6">
+                <small class="text-muted">
+                  <i class="fas fa-box me-1"></i>
+                  {{ category.product_count }} products
+                </small>
+              </div>
+              <div class="col-6">
+                <small class="text-muted">
+                  <i class="fas fa-star me-1"></i>
+                  {{ category.active_products }} active
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <a
+            href="{{ url_for('category_products', category_id=category.id) }}"
+            class="btn btn-primary mt-auto"
+          >
+            Explore Products <i class="fas fa-arrow-right ms-1"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- No Results Message -->
+  <div class="row d-none" id="noResults">
+    <div class="col-12 text-center py-5">
+      <i class="fas fa-search fa-3x text-muted mb-3"></i>
+      <h4 class="text-muted">No categories found</h4>
+      <p class="text-muted">Try adjusting your search or filter criteria</p>
+      <button class="btn btn-primary" onclick="resetFilters()">
+        <i class="fas fa-refresh me-1"></i>Reset Filters
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const categorySearch = document.getElementById("categorySearch");
+    const sortCategories = document.getElementById("sortCategories");
+    const categoriesContainer = document.getElementById("categoriesContainer");
+    const noResults = document.getElementById("noResults");
+    const viewModeRadios = document.querySelectorAll('input[name="viewMode"]');
+
+    let currentViewMode = "grid";
+
+    // Search functionality
+    categorySearch.addEventListener("input", function (e) {
+      filterAndSortCategories();
+    });
+
+    // Sort functionality
+    sortCategories.addEventListener("change", function (e) {
+      filterAndSortCategories();
+    });
+
+    // View mode toggle
+    viewModeRadios.forEach((radio) => {
+      radio.addEventListener("change", function (e) {
+        currentViewMode = this.id === "gridView" ? "grid" : "list";
+        applyViewMode();
+      });
+    });
+
+    function filterAndSortCategories() {
+      const searchTerm = categorySearch.value.toLowerCase().trim();
+      const sortBy = sortCategories.value;
+
+      const categoryItems =
+        categoriesContainer.querySelectorAll(".category-item");
+      let visibleItems = 0;
+
+      categoryItems.forEach((item) => {
+        const categoryName = item.getAttribute("data-name");
+        const productCount = parseInt(item.getAttribute("data-products"));
+
+        // Filter by search term
+        const matchesSearch = categoryName.includes(searchTerm);
+
+        if (matchesSearch) {
+          item.style.display = "block";
+          visibleItems++;
+
+          // Store data for sorting
+          item.setAttribute("data-sort-name", categoryName);
+          item.setAttribute("data-sort-products", productCount);
+        } else {
+          item.style.display = "none";
+        }
+      });
+
+      // Sort categories
+      const sortedItems = Array.from(categoryItems)
+        .filter((item) => item.style.display !== "none")
+        .sort((a, b) => {
+          switch (sortBy) {
+            case "name_desc":
+              return b
+                .getAttribute("data-sort-name")
+                .localeCompare(a.getAttribute("data-sort-name"));
+            case "products_high":
+              return (
+                parseInt(b.getAttribute("data-sort-products")) -
+                parseInt(a.getAttribute("data-sort-products"))
+              );
+            case "products_low":
+              return (
+                parseInt(a.getAttribute("data-sort-products")) -
+                parseInt(b.getAttribute("data-sort-products"))
+              );
+            case "name":
+            default:
+              return a
+                .getAttribute("data-sort-name")
+                .localeCompare(b.getAttribute("data-sort-name"));
+          }
+        });
+
+      // Re-append sorted items
+      sortedItems.forEach((item) => {
+        categoriesContainer.appendChild(item);
+      });
+
+      // Show/hide no results message
+      if (visibleItems === 0) {
+        noResults.classList.remove("d-none");
+        categoriesContainer.classList.add("d-none");
+      } else {
+        noResults.classList.add("d-none");
+        categoriesContainer.classList.remove("d-none");
+      }
+    }
+
+    function applyViewMode() {
+      const categoryItems =
+        categoriesContainer.querySelectorAll(".category-item");
+
+      categoryItems.forEach((item) => {
+        if (currentViewMode === "list") {
+          item.classList.remove("col-md-6", "col-lg-4");
+          item.classList.add("col-12");
+          item
+            .querySelector(".category-card")
+            .classList.add("category-list-view");
+        } else {
+          item.classList.remove("col-12");
+          item.classList.add("col-md-6", "col-lg-4");
+          item
+            .querySelector(".category-card")
+            .classList.remove("category-list-view");
+        }
+      });
+    }
+
+    function resetFilters() {
+      categorySearch.value = "";
+      sortCategories.value = "name";
+      document.getElementById("gridView").checked = true;
+      currentViewMode = "grid";
+      filterAndSortCategories();
+      applyViewMode();
+    }
+
+    // Initialize
+    filterAndSortCategories();
+  });
+</script>
+
+<style>
+  /* Navy Blue & Yellow Color Scheme */
+  :root {
+    --navy-blue: #1e3a8a;
+    --navy-dark: #172554;
+    --navy-light: #3b82f6;
+    --bright-yellow: #f59e0b;
+    --yellow-dark: #d97706;
+    --yellow-light: #fbbf24;
+  }
+
+  /* Category Banner */
+  .category-banner {
+    background: linear-gradient(
+      135deg,
+      var(--navy-blue) 0%,
+      var(--navy-dark) 100%
+    ) !important;
+    background-size: cover;
+    background-position: center;
+  }
+
+  /* Category Card Enhancements */
+  .category-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  .category-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(30, 58, 138, 0.15);
+    border-color: var(--navy-blue);
+  }
+
+  .category-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+  }
+
+  .category-badge .badge {
+    background-color: var(--bright-yellow) !important;
+    color: #000;
+  }
+
+  .category-image {
+    height: 200px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .category-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .category-card:hover .category-img {
+    transform: scale(1.05);
+  }
+
+  .category-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    color: var(--bright-yellow);
+  }
+
+  .category-icon {
+    margin-top: 1rem;
+    color: var(--bright-yellow);
+  }
+
+  .category-meta {
+    border-top: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+    padding: 0.75rem 0;
+    margin: 1rem 0;
+  }
+
+  /* List View Styles */
+  .category-list-view {
+    display: flex;
+    flex-direction: row;
+    text-align: left;
+    border-left: 4px solid var(--navy-blue);
+  }
+
+  .category-list-view .category-image {
+    width: 200px;
+    height: auto;
+    flex-shrink: 0;
+    min-height: 150px;
+  }
+
+  .category-list-view .card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-left: 1.5rem;
+  }
+
+  .category-list-view .category-icon {
+    display: none;
+  }
+
+  /* Stat Cards */
+  .stat-card {
+    transition: transform 0.2s ease;
+    border: 1px solid #e9ecef;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(30, 58, 138, 0.1);
+    border-color: var(--navy-blue);
+  }
+
+  .stat-card h4 {
+    color: var(--navy-blue);
+  }
+
+  /* Buttons */
+  .btn-primary {
+    background-color: var(--navy-blue);
+    border-color: var(--navy-blue);
+  }
+
+  .btn-primary:hover {
+    background-color: var(--navy-dark);
+    border-color: var(--navy-dark);
+  }
+
+  .btn-outline-primary {
+    color: var(--navy-blue);
+    border-color: var(--navy-blue);
+  }
+
+  .btn-outline-primary:hover {
+    background-color: var(--navy-blue);
+    border-color: var(--navy-blue);
+    color: white;
+  }
+
+  /* Filter Section */
+  .btn-check:checked + .btn-outline-primary {
+    background-color: var(--navy-blue);
+    border-color: var(--navy-blue);
+    color: white;
+  }
+
+  /* Form Elements */
+  .form-control:focus,
+  .form-select:focus {
+    border-color: var(--navy-blue);
+    box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25);
+  }
+
+  .input-group-text {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    color: var(--navy-blue);
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .category-banner {
+      padding: 2rem 1rem !important;
+      text-align: center;
+    }
+
+    .category-banner .display-5 {
+      font-size: 2rem;
+    }
+
+    .category-list-view {
+      flex-direction: column;
+      border-left: none;
+      border-top: 4px solid var(--navy-blue);
+    }
+
+    .category-list-view .category-image {
+      width: 100%;
+      height: 200px;
+    }
+
+    .category-list-view .card-body {
+      padding-left: 1rem;
+    }
+
+    .category-image {
+      height: 150px;
+    }
+  }
+
+  /* Loading Animation */
+  .category-card {
+    animation: fadeInUp 0.6s ease;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Image loading states */
+  .category-img {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+
+  .category-img[src=""] {
+    opacity: 0;
+  }
+
+  /* Hover effects */
+  .category-card:hover .category-icon {
+    transform: scale(1.1);
+    transition: transform 0.3s ease;
+  }
+
+  /* Section backgrounds */
+  .bg-light {
+    background-color: #f8f9fa !important;
+  }
+
+  /* Text colors */
+  .text-primary {
+    color: var(--navy-blue) !important;
+  }
+
+  .text-muted {
+    color: #6c757d !important;
+  }
+
+  /* Card header enhancements */
+  .card {
+    border: 1px solid #e9ecef;
+  }
+
+  .card .card-body {
+    padding: 1.5rem;
+  }
+</style>
+{% endblock %}

@@ -1,4 +1,7 @@
-from venv import logger
+import logging
+from venv import main
+logger = logging.getLogger(__name__)
+
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -17,6 +20,9 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from flask import send_file
 import qrcode
+from flask import request, jsonify
+from models import Address, db
+from weasyprint import HTML
 import io
 
 # Add this at the top of app.py after imports
@@ -48,7 +54,12 @@ def load_user(user_id):
 
 @app.context_processor
 def utility_processor():
-    return dict(format_currency=format_currency)
+    from datetime import timedelta
+    return dict(
+        format_currency=format_currency,
+        get_delivery_date=get_delivery_date,
+        timedelta=timedelta
+    )
 
 @app.route('/')
 def index():
@@ -639,53 +650,100 @@ def login():
 
 @app.route('/reset_password', methods=['GET', 'POST'])
 def reset_password():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    
+    """Handle both password reset (forgot password) and password change (logged in)"""
     if request.method == 'POST':
-        email = request.form.get('email')
-        otp = request.form.get('otp')
-        new_password = request.form.get('new_password')
-        
-        user = User.query.filter_by(email=email).first()
-        
-        if not user:
-            flash('Email not found!', 'danger')
-            return render_template('auth/reset_password.html', email=email)
-        
-        if 'reset_otp_sent' in session and session.get('reset_email') == email:
-            if otp and not new_password:
-                # Verify OTP
-                otp_record = OTPVerification.query.filter_by(
-                    email=email,
-                    purpose='reset_password',
-                    verified=False
-                ).first()
-                
-                if otp_record and otp_record.otp == otp and datetime.utcnow() < otp_record.expires_at:
-                    otp_record.verified = True
-                    db.session.commit()
-                    session['reset_otp_verified'] = True
-                    flash('OTP verified! Please set new password.', 'success')
-                else:
-                    flash('Invalid or expired OTP!', 'danger')
-            elif new_password and session.get('reset_otp_verified'):
-                # Set new password
-                user.password = generate_password_hash(new_password)
-                db.session.commit()
-                
-                session.pop('reset_otp_sent', None)
-                session.pop('reset_email', None)
-                session.pop('reset_otp_verified', None)
-                
-                flash('Password reset successful! Please login.', 'success')
-                return redirect(url_for('login'))
+        # If user is logged in, it's a password change request
+        if current_user.is_authenticated:
+            return handle_password_change()
         else:
-            flash('Please request OTP first!', 'danger')
+            return handle_password_reset()
+    
+    # GET request - show appropriate form
+    if current_user.is_authenticated:
+        # For logged-in users, redirect to profile security tab
+        flash('Please use the security tab in your profile to change password.', 'info')
+        return redirect(url_for('profile'))
+    else:
+        # For non-logged-in users, show password reset form
+        return render_template('auth/reset_password.html')
+
+def handle_password_change():
+    """Handle password change for logged-in users"""
+    try:
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
         
+        # Validate inputs
+        if not all([current_password, new_password, confirm_password]):
+            flash('All fields are required!', 'danger')
+            return redirect(url_for('profile'))
+        
+        # Check if new passwords match
+        if new_password != confirm_password:
+            flash('New passwords do not match!', 'danger')
+            return redirect(url_for('profile'))
+        
+        # Verify current password
+        if not check_password_hash(current_user.password, current_password):
+            flash('Current password is incorrect!', 'danger')
+            return redirect(url_for('profile'))
+        
+        # Update password
+        current_user.password = generate_password_hash(new_password)
+        db.session.commit()
+        
+        flash('Password changed successfully!', 'success')
+        return redirect(url_for('profile'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash('Error changing password. Please try again.', 'danger')
+        return redirect(url_for('profile'))
+
+def handle_password_reset():
+    """Handle password reset for non-logged-in users (existing functionality)"""
+    email = request.form.get('email')
+    otp = request.form.get('otp')
+    new_password = request.form.get('new_password')
+    
+    user = User.query.filter_by(email=email).first()
+    
+    if not user:
+        flash('Email not found!', 'danger')
         return render_template('auth/reset_password.html', email=email)
     
-    return render_template('auth/reset_password.html')
+    if 'reset_otp_sent' in session and session.get('reset_email') == email:
+        if otp and not new_password:
+            # Verify OTP
+            otp_record = OTPVerification.query.filter_by(
+                email=email,
+                purpose='reset_password',
+                verified=False
+            ).first()
+            
+            if otp_record and otp_record.otp == otp and datetime.utcnow() < otp_record.expires_at:
+                otp_record.verified = True
+                db.session.commit()
+                session['reset_otp_verified'] = True
+                flash('OTP verified! Please set new password.', 'success')
+            else:
+                flash('Invalid or expired OTP!', 'danger')
+        elif new_password and session.get('reset_otp_verified'):
+            # Set new password
+            user.password = generate_password_hash(new_password)
+            db.session.commit()
+            
+            session.pop('reset_otp_sent', None)
+            session.pop('reset_email', None)
+            session.pop('reset_otp_verified', None)
+            
+            flash('Password reset successful! Please login.', 'success')
+            return redirect(url_for('login'))
+    else:
+        flash('Please request OTP first!', 'danger')
+    
+    return render_template('auth/reset_password.html', email=email)
 
 @app.route('/send_reset_otp', methods=['POST'])
 def send_reset_otp():
@@ -729,26 +787,13 @@ def logout():
 @app.route('/profile')
 @login_required
 def profile():
-    try:
-        # Get user's orders
-        user_orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).limit(5).all()
-        
-        # Get wishlist count
-        wishlist_count = Wishlist.query.filter_by(user_id=current_user.id).count()
-        
-        addresses = []  
-
-        payment_methods = []  
-        
-        return render_template('main/profile.html', 
-                             orders=user_orders,
-                             wishlist_count=wishlist_count,
-                             addresses=addresses,
-                             payment_methods=payment_methods)
-        
-    except Exception as e:
-        app.logger.error(f"Profile error: {str(e)}")
-        return f"Error loading profile: {str(e)}", 500
+    addresses = Address.query.filter_by(user_id=current_user.id).all()
+    orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
+    
+    return render_template('main/profile.html', 
+                     addresses=addresses,
+                     orders=orders,
+                     wishlist_count=current_user.get_wishlist_count())
 
 @app.route('/update_profile', methods=['POST'])
 @login_required
@@ -762,6 +807,163 @@ def update_profile():
     db.session.commit()
     flash('Profile updated successfully!', 'success')
     return redirect(url_for('profile'))
+
+@app.route('/api/addresses', methods=['GET', 'POST'])
+def manage_addresses():
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': 'Please login first'})
+    
+    if request.method == 'POST':
+        return add_address()
+    else:
+        return get_addresses()
+
+def get_addresses():
+    addresses = Address.query.filter_by(user_id=current_user.id).all()
+    return jsonify({
+        'success': True,
+        'addresses': [address.to_dict() for address in addresses]
+    })
+
+def add_address():
+    try:
+        data = request.form
+        
+        # Validate required fields
+        required_fields = ['label', 'full_name', 'phone', 'address_line1', 'city', 'state', 'pincode']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'{field.replace("_", " ").title()} is required'})
+        
+        # If this is set as default, unset other defaults
+        is_default = data.get('is_default') == 'on'
+        if is_default:
+            Address.query.filter_by(user_id=current_user.id, is_default=True).update({'is_default': False})
+            db.session.commit()
+        
+        # Create new address
+        address = Address(
+            user_id=current_user.id,
+            label=data['label'],
+            full_name=data['full_name'],
+            phone=data['phone'],
+            address_line1=data['address_line1'],
+            address_line2=data.get('address_line2', ''),
+            city=data['city'],
+            state=data['state'],
+            pincode=data['pincode'],
+            is_default=is_default or not current_user.addresses.first()  # Set as default if first address
+        )
+        
+        db.session.add(address)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Address added successfully',
+            'address': address.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error saving address: {str(e)}'})
+
+@app.route('/api/addresses/<int:address_id>', methods=['GET', 'PUT', 'DELETE'])
+def manage_address(address_id):
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': 'Please login first'})
+    
+    address = Address.query.filter_by(id=address_id, user_id=current_user.id).first()
+    if not address:
+        return jsonify({'success': False, 'message': 'Address not found'})
+    
+    if request.method == 'GET':
+        return jsonify({'success': True, 'address': address.to_dict()})
+    elif request.method == 'PUT':
+        return update_address(address)
+    elif request.method == 'DELETE':
+        return delete_address(address)
+
+def update_address(address):
+    try:
+        data = request.form
+        
+        # Validate required fields
+        required_fields = ['label', 'full_name', 'phone', 'address_line1', 'city', 'state', 'pincode']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'{field.replace("_", " ").title()} is required'})
+        
+        # If this is set as default, unset other defaults
+        is_default = data.get('is_default') == 'on'
+        if is_default:
+            Address.query.filter_by(user_id=current_user.id, is_default=True).update({'is_default': False})
+        
+        # Update address
+        address.label = data['label']
+        address.full_name = data['full_name']
+        address.phone = data['phone']
+        address.address_line1 = data['address_line1']
+        address.address_line2 = data.get('address_line2', '')
+        address.city = data['city']
+        address.state = data['state']
+        address.pincode = data['pincode']
+        address.is_default = is_default
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Address updated successfully',
+            'address': address.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error updating address: {str(e)}'})
+
+def delete_address(address):
+    try:
+        was_default = address.is_default
+        
+        db.session.delete(address)
+        db.session.commit()
+        
+        # If we deleted the default address, set a new default
+        if was_default:
+            new_default = Address.query.filter_by(user_id=current_user.id).first()
+            if new_default:
+                new_default.is_default = True
+                db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Address deleted successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error deleting address: {str(e)}'})
+
+@app.route('/api/addresses/<int:address_id>/set_default', methods=['POST'])
+def set_default_address(address_id):
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': 'Please login first'})
+    
+    try:
+        address = Address.query.filter_by(id=address_id, user_id=current_user.id).first()
+        if not address:
+            return jsonify({'success': False, 'message': 'Address not found'})
+        
+        # Unset current default
+        Address.query.filter_by(user_id=current_user.id, is_default=True).update({'is_default': False})
+        
+        # Set new default
+        address.is_default = True
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Default address updated successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error setting default address: {str(e)}'})
 
 @app.route('/cart')
 @login_required
@@ -802,7 +1004,7 @@ def checkout():
             total_amount=totals['grand_total'],
             shipping_address=shipping_address,
             payment_method=payment_method,
-            payment_status=payment_status  # Set the correct payment status
+            payment_status=payment_status
         )
         db.session.add(order)
         
@@ -935,6 +1137,19 @@ def cancel_order(order_id):
     
     return redirect(url_for('profile'))
 
+@app.route('/order/<int:order_id>')
+@login_required
+def order_details(order_id):
+    """Display order details"""
+    order = Order.query.get_or_404(order_id)
+    
+    # Check if user owns the order
+    if order.user_id != current_user.id:
+        flash('Unauthorized!', 'danger')
+        return redirect(url_for('index'))
+    
+    return render_template('main/order_details.html', order=order)
+
 @app.route('/track_order', methods=['GET', 'POST'])
 def track_order():
     if request.method == 'POST':
@@ -1019,7 +1234,10 @@ def print_receipt(order_id):
         flash('Unauthorized!', 'danger')
         return redirect(url_for('index'))
     
-    return render_template('receipts/receipt.html', order=order)
+    return render_template('receipts/invoice.html', 
+                         order=order,
+                         current_user=current_user,
+                         format_currency=format_currency)
 
 def calculate_totals(cart_items):
     """Calculate cart totals with fixed tax"""
@@ -1108,10 +1326,27 @@ def remove_from_wishlist_api(product_id):
             'message': 'Failed to remove from wishlist'
         }), 500
 
+@app.route('/invoice/<int:order_id>')
+@login_required
+def view_invoice(order_id):
+    """Display invoice preview page"""
+    order = Order.query.get_or_404(order_id)
+    
+    # Check if user owns the order
+    if order.user_id != current_user.id:
+        flash('Unauthorized!', 'danger')
+        return redirect(url_for('index'))
+    
+    return render_template('receipts/invoice.html', 
+                         order=order,
+                         current_user=current_user,
+                         format_currency=format_currency,
+                         timedelta=timedelta)
+
 @app.route('/download_invoice/<int:order_id>')
 @login_required
 def download_invoice(order_id):
-    """Generate and download invoice as PDF"""
+    """Generate and download invoice as PDF using HTML template"""
     try:
         order = Order.query.get_or_404(order_id)
         
@@ -1122,236 +1357,30 @@ def download_invoice(order_id):
             flash('Unauthorized!', 'danger')
             return redirect(url_for('index'))
         
-        # Check if reportlab is available
-        if not REPORTLAB_AVAILABLE:
-            logger.warning("ReportLab not available - cannot generate PDF invoice")
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({
-                    'success': False, 
-                    'message': 'PDF generation is currently unavailable. Please try again later.'
-                }), 503
-            
-            # Fallback: Render HTML invoice that user can print
-            return render_template('receipts/invoice_html.html', order=order)
+        # Render HTML template with all required context
+        html_content = render_template('receipts/invoice.html', 
+                                     order=order,
+                                     current_user=current_user,
+                                     format_currency=format_currency,
+                                     timedelta=timedelta)
         
-        # Create PDF in memory
-        buffer = io.BytesIO()
-        
-        try:
-            # Create PDF canvas
-            pdf = canvas.Canvas(buffer, pagesize=letter)
-            pdf.setTitle(f"Invoice-{order.order_id}")
-            
-            # Set up colors
-            primary_color = (0.255, 0.412, 0.882)  # Royal Blue #4169E1
-            secondary_color = (0.2, 0.2, 0.2)      # Dark Gray
-            light_gray = (0.9, 0.9, 0.9)           # Light Gray
-            
-            # Header Section
-            pdf.setFillColorRGB(*primary_color)
-            pdf.rect(0, 750, 612, 60, fill=1, stroke=0)  # Header background
-            
-            pdf.setFillColorRGB(1, 1, 1)  # White text
-            pdf.setFont("Helvetica-Bold", 24)
-            pdf.drawString(50, 770, "NEXAMART")
-            
-            pdf.setFont("Helvetica", 14)
-            pdf.drawString(50, 745, "INVOICE")
-            
-            # Company Info
-            pdf.setFillColorRGB(*secondary_color)
-            pdf.setFont("Helvetica", 8)
-            pdf.drawString(400, 770, "NexaMart Online Store")
-            pdf.drawString(400, 760, "support@nexamart.com")
-            pdf.drawString(400, 750, "+91 9876543210")
-            
-            # Order Information
-            y_position = 700
-            pdf.setFillColorRGB(*secondary_color)
-            pdf.setFont("Helvetica-Bold", 12)
-            pdf.drawString(50, y_position, "ORDER INFORMATION")
-            
-            y_position -= 20
-            pdf.setFont("Helvetica", 10)
-            pdf.drawString(50, y_position, f"Order ID: {order.order_id}")
-            pdf.drawString(300, y_position, f"Order Date: {order.created_at.strftime('%B %d, %Y')}")
-            
-            y_position -= 15
-            pdf.drawString(50, y_position, f"Status: {order.get_status_display()}")
-            pdf.drawString(300, y_position, f"Payment: {order.payment_method.upper()}")
-            
-            # Customer Information
-            y_position -= 30
-            pdf.setFont("Helvetica-Bold", 12)
-            pdf.drawString(50, y_position, "BILL TO")
-            
-            y_position -= 15
-            pdf.setFont("Helvetica", 10)
-            if current_user.full_name:
-                pdf.drawString(50, y_position, current_user.full_name)
-                y_position -= 15
-            pdf.drawString(50, y_position, current_user.email)
-            y_position -= 15
-            if current_user.phone:
-                pdf.drawString(50, y_position, current_user.phone)
-                y_position -= 15
-            if current_user.address:
-                # Handle multi-line address
-                address_lines = current_user.address.split('\n')
-                for line in address_lines[:2]:  # Limit to 2 lines
-                    if y_position < 100:
-                        pdf.showPage()
-                        y_position = 750
-                    pdf.drawString(50, y_position, line)
-                    y_position -= 15
-                
-                city_state = f"{current_user.city}, {current_user.state} - {current_user.pincode}"
-                if y_position < 100:
-                    pdf.showPage()
-                    y_position = 750
-                pdf.drawString(50, y_position, city_state)
-                y_position -= 30
-            
-            # Items Table Header
-            if y_position < 150:
-                pdf.showPage()
-                y_position = 750
-            
-            pdf.setFillColorRGB(*light_gray)
-            pdf.rect(50, y_position-20, 512, 20, fill=1, stroke=0)
-            
-            pdf.setFillColorRGB(*secondary_color)
-            pdf.setFont("Helvetica-Bold", 10)
-            pdf.drawString(60, y_position-5, "PRODUCT")
-            pdf.drawString(350, y_position-5, "QTY")
-            pdf.drawString(400, y_position-5, "PRICE")
-            pdf.drawString(480, y_position-5, "TOTAL")
-            
-            # Draw line under header
-            pdf.setStrokeColorRGB(*secondary_color)
-            pdf.line(50, y_position-25, 562, y_position-25)
-            
-            y_position -= 35
-            
-            # Items List
-            pdf.setFont("Helvetica", 9)
-            for item in order.items:
-                if y_position < 100:
-                    pdf.showPage()
-                    y_position = 750
-                    # Redraw table header on new page
-                    pdf.setFillColorRGB(*light_gray)
-                    pdf.rect(50, y_position-20, 512, 20, fill=1, stroke=0)
-                    pdf.setFillColorRGB(*secondary_color)
-                    pdf.setFont("Helvetica-Bold", 10)
-                    pdf.drawString(60, y_position-5, "PRODUCT")
-                    pdf.drawString(350, y_position-5, "QTY")
-                    pdf.drawString(400, y_position-5, "PRICE")
-                    pdf.drawString(480, y_position-5, "TOTAL")
-                    pdf.setStrokeColorRGB(*secondary_color)
-                    pdf.line(50, y_position-25, 562, y_position-25)
-                    y_position -= 35
-                
-                # Product name (truncate if too long)
-                product_name = item.product_name or "Product"
-                if len(product_name) > 40:
-                    product_name = product_name[:37] + "..."
-                
-                pdf.setFillColorRGB(*secondary_color)
-                pdf.drawString(60, y_position, product_name)
-                pdf.drawString(350, y_position, str(item.quantity))
-                pdf.drawString(400, y_position, format_currency(item.price))
-                pdf.drawString(480, y_position, format_currency(item.subtotal))
-                
-                y_position -= 20
-            
-            # Totals Section
-            if y_position < 150:
-                pdf.showPage()
-                y_position = 750
-            
-            y_position -= 30
-            pdf.setStrokeColorRGB(*secondary_color)
-            pdf.line(350, y_position, 562, y_position)
-            y_position -= 20
-            
-            pdf.setFont("Helvetica", 10)
-            pdf.drawString(400, y_position, "Subtotal:")
-            pdf.drawString(480, y_position, format_currency(order.get_subtotal()))
-            
-            y_position -= 15
-            pdf.drawString(400, y_position, "Shipping:")
-            pdf.drawString(480, y_position, format_currency(order.shipping_cost))
-            
-            y_position -= 15
-            pdf.drawString(400, y_position, "Tax:")
-            pdf.drawString(480, y_position, format_currency(order.total_amount - order.get_subtotal() - order.shipping_cost))
-            
-            y_position -= 15
-            pdf.setFont("Helvetica-Bold", 11)
-            pdf.drawString(400, y_position, "Grand Total:")
-            pdf.drawString(480, y_position, format_currency(order.total_amount))
-            
-            # Payment Information
-            y_position -= 40
-            pdf.setFont("Helvetica-Bold", 10)
-            pdf.drawString(50, y_position, "PAYMENT INFORMATION")
-            
-            y_position -= 15
-            pdf.setFont("Helvetica", 9)
-            pdf.drawString(50, y_position, f"Method: {order.payment_method.upper()}")
-            pdf.drawString(200, y_position, f"Status: {order.payment_status.upper()}")
-            
-            if order.payment_status == 'completed':
-                pdf.drawString(350, y_position, f"Paid on: {order.created_at.strftime('%b %d, %Y')}")
-            
-            # Footer
-            y_position -= 50
-            pdf.setFont("Helvetica-Oblique", 8)
-            pdf.setFillColorRGB(0.5, 0.5, 0.5)
-            pdf.drawString(50, y_position, "Thank you for shopping with NexaMart!")
-            pdf.drawString(50, y_position-10, "For any queries, contact: support@nexamart.com")
-            pdf.drawString(50, y_position-20, "This is a computer-generated invoice.")
-            
-            # Save PDF
-            pdf.save()
-            
-        except Exception as pdf_error:
-            logger.error(f"PDF generation error: {str(pdf_error)}")
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({
-                    'success': False, 
-                    'message': 'Error generating PDF invoice'
-                }), 500
-            
-            # Fallback to HTML invoice
-            return render_template('receipts/invoice_html.html', order=order)
-        
-        # Get PDF data from buffer
-        buffer.seek(0)
-        pdf_data = buffer.getvalue()
-        buffer.close()
+        # Create PDF from HTML
+        pdf = HTML(string=html_content).write_pdf()
         
         # Create response
-        response = make_response(pdf_data)
+        response = make_response(pdf)
         response.headers['Content-Type'] = 'application/pdf'
         response.headers['Content-Disposition'] = f'attachment; filename=nexamart-invoice-{order.order_id}.pdf'
         
-        logger.info(f"Invoice PDF generated successfully for order {order.order_id}")
         return response
         
     except Exception as e:
-        logger.error(f"Error in download_invoice route: {str(e)}")
+        logger.error(f"Error generating PDF invoice: {str(e)}")
         
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({
-                'success': False, 
-                'message': 'An error occurred while generating the invoice'
-            }), 500
-        
-        flash('Error generating invoice. Please try again.', 'danger')
-        return redirect(url_for('orders'))
-
+        # Fallback: Redirect to HTML invoice page
+        flash('Error generating PDF. Showing HTML version instead.', 'warning')
+        return redirect(url_for('view_invoice', order_id=order_id))
+    
 @app.route('/api/generate-qr/<int:order_id>')
 @login_required
 def generate_qr_code(order_id):

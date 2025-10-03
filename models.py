@@ -31,6 +31,8 @@ class User(UserMixin, db.Model):
     marketing_emails = db.Column(db.Boolean, default=True)
     profile_image = db.Column(db.String(200))
     date_of_birth = db.Column(db.Date)
+    gender = db.Column(db.String(10))
+    reward_points = db.Column(db.Integer, default=0)
     
     # Social media links (for reviews)
     twitter_handle = db.Column(db.String(50))
@@ -45,6 +47,7 @@ class User(UserMixin, db.Model):
     recently_viewed = db.relationship('RecentlyViewed', backref='user', lazy=True, cascade='all, delete-orphan')
     moderated_reviews = db.relationship('ProductReview', backref='moderator', lazy=True, foreign_keys='ProductReview.moderated_by')
     answered_questions = db.relationship('ProductQuestion', backref='answerer', lazy=True, foreign_keys='ProductQuestion.answered_by_user_id')
+    user_addresses = db.relationship('Address', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def get_cart_count(self):
         """Get total number of items in cart"""
@@ -57,6 +60,15 @@ class User(UserMixin, db.Model):
     def get_wishlist_count(self):
         """Get total number of wishlist items"""
         return len(self.wishlist_items)
+    
+    def get_wishlist_products(self):
+        """Get wishlist products"""
+        return [wishlist_item.product for wishlist_item in self.wishlist_items if wishlist_item.product]
+    
+    @property
+    def wishlist_products(self):
+        """Get wishlist products as property for template access"""
+        return self.get_wishlist_products()
     
     def get_recently_viewed(self, limit=10):
         """Get recently viewed products"""
@@ -74,8 +86,45 @@ class User(UserMixin, db.Model):
         """Check if user can review a product (has purchased it)"""
         return self.has_purchased_product(product_id)
     
+    def get_default_address(self):
+        """Get user's default address"""
+        return Address.query.filter_by(user_id=self.id, is_default=True).first()
+    
     def __repr__(self):
         return f'<User {self.email}>'
+
+class Address(db.Model):
+    __tablename__ = 'addresses'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    label = db.Column(db.String(50), nullable=False)  # Home, Office, etc.
+    full_name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(15), nullable=False)
+    address_line1 = db.Column(db.String(200), nullable=False)
+    address_line2 = db.Column(db.String(200))
+    city = db.Column(db.String(100), nullable=False)
+    state = db.Column(db.String(100), nullable=False)
+    pincode = db.Column(db.String(10), nullable=False)
+    is_default = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'label': self.label,
+            'full_name': self.full_name,
+            'phone': self.phone,
+            'address_line1': self.address_line1,
+            'address_line2': self.address_line2,
+            'city': self.city,
+            'state': self.state,
+            'pincode': self.pincode,
+            'is_default': self.is_default
+        }
+    
+    def __repr__(self):
+        return f'<Address {self.label} - {self.user.email}>'
 
 class OTPVerification(db.Model):
     __tablename__ = 'otp_verifications'
@@ -215,9 +264,12 @@ class Product(db.Model):
     
     def update_rating(self, new_rating):
         """Update average rating when new review is added"""
-        total_rating = self.average_rating * self.review_count
-        self.review_count += 1
-        self.average_rating = (total_rating + new_rating) / self.review_count
+        if self.review_count == 0:
+            self.average_rating = new_rating
+        else:
+            total_rating = self.average_rating * self.review_count
+            self.review_count += 1
+            self.average_rating = (total_rating + new_rating) / self.review_count
     
     def get_additional_images_list(self):
         """Get additional images as Python list"""
@@ -244,7 +296,8 @@ class Product(db.Model):
     def get_top_reviews(self, limit=5):
         """Get top reviews sorted by helpful votes"""
         return ProductReview.query.filter_by(
-            product_id=self.id
+            product_id=self.id,
+            is_approved=True
         ).order_by(ProductReview.helpful.desc()).limit(limit).all()
     
     def __repr__(self):
@@ -399,7 +452,8 @@ class Order(db.Model):
         
         # Restore product stock for all items
         for item in self.items:
-            item.product.restore_stock(item.quantity)
+            if item.product:
+                item.product.restore_stock(item.quantity)
         
         # Update order status and timestamps
         self.status = 'cancelled'
@@ -415,7 +469,8 @@ class Order(db.Model):
         
         # Restore product stock for all items
         for item in self.items:
-            item.product.restore_stock(item.quantity)
+            if item.product:
+                item.product.restore_stock(item.quantity)
         
         # Update order status
         self.status = 'returned'
@@ -480,8 +535,41 @@ class Order(db.Model):
         return sum(item.quantity for item in self.items)
     
     def get_subtotal(self):
-        """Get order subtotal (without shipping)"""
+        """Get order subtotal (without shipping and tax)"""
         return sum(item.subtotal for item in self.items)
+    
+    def get_tax_amount(self):
+        """Calculate tax amount (fixed ₹300 as per cart logic)"""
+        return 300.0
+    
+    def get_shipping_cost(self):
+        """Calculate shipping cost (free if subtotal >= 999)"""
+        subtotal = self.get_subtotal()
+        return 0.0 if subtotal >= 999 else 50.0
+    
+    def get_grand_total(self):
+        """Calculate grand total including all charges"""
+        subtotal = self.get_subtotal()
+        shipping = self.get_shipping_cost()
+        tax = self.get_tax_amount()
+        return subtotal + shipping + tax
+    
+    def get_order_summary(self):
+        """Get complete order summary for invoices"""
+        return {
+            'subtotal': self.get_subtotal(),
+            'shipping_cost': self.get_shipping_cost(),
+            'tax_amount': self.get_tax_amount(),
+            'grand_total': self.total_amount,
+            'items_count': self.get_items_count(),
+            'shipping_address': self.shipping_address
+        }
+    
+    def get_formatted_shipping_address(self):
+        """Get shipping address as formatted lines"""
+        if self.shipping_address:
+            return self.shipping_address.split('\n')
+        return []
     
     def __repr__(self):
         return f'<Order {self.order_id} - {self.status}>'
@@ -512,6 +600,11 @@ class OrderItem(db.Model):
     def subtotal(self):
         """Calculate subtotal for this order item"""
         return self.price * self.quantity
+    
+    @property
+    def product_name_display(self):
+        """Get product name for display (fallback to current product name)"""
+        return self.product_name or (self.product.name if self.product else "Product")
     
     def can_review(self):
         """Check if this item can be reviewed (order is delivered)"""
@@ -665,7 +758,7 @@ def generate_order_id():
     """Generate unique order ID"""
     timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
     random_str = secrets.token_hex(3).upper()
-    return f'ORD{timestamp}{random_str}'
+    return f'NM{timestamp}{random_str}'
 
 # Helper function to generate SKU
 def generate_sku(product_name, category_id):

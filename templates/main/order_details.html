@@ -1,0 +1,673 @@
+{% extends "main/base.html" %} {% block title %}Order Details - {{
+order.order_id }} | NexaMart{% endblock %} {% block content %}
+<div class="container py-4">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('index') }}" class="text-navy text-decoration-none">
+          <i class="fas fa-home me-1"></i>Home
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a
+          href="{{ url_for('profile') }}"
+          class="text-navy text-decoration-none"
+        >
+          <i class="fas fa-user me-1"></i>Profile
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a
+          href="{{ url_for('orders') }}"
+          class="text-navy text-decoration-none"
+        >
+          <i class="fas fa-shopping-bag me-1"></i>Orders
+        </a>
+      </li>
+      <li class="breadcrumb-item active text-yellow" aria-current="page">
+        <i class="fas fa-receipt me-1"></i>Order Details
+      </li>
+    </ol>
+  </nav>
+
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm bg-gradient-navy text-white">
+        <div class="card-body p-4">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <h1 class="h3 mb-2">
+                <i class="fas fa-receipt me-2 text-yellow"></i>
+                Order Details
+              </h1>
+              <p class="mb-0 opacity-75">
+                <i class="fas fa-hashtag me-1 text-yellow"></i>
+                {{ order.order_id }}
+              </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+              <div class="order-status-badge">
+                <span class="badge bg-yellow text-navy px-3 py-2 fs-6">
+                  <i
+                    class="fas fa-{{ 'check-circle' if order.status == 'delivered' else 'truck' if order.status == 'shipped' else 'clock' }} me-1"
+                  ></i>
+                  {{ order.get_status_display() }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+      <!-- Order Items Card -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light-navy">
+          <h5 class="mb-0 text-navy">
+            <i class="fas fa-boxes me-2 text-yellow"></i>
+            Order Items ({{ order.items|length }})
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="border-0 ps-4 text-navy">Product</th>
+                  <th class="border-0 text-navy text-center">Price</th>
+                  <th class="border-0 text-navy text-center">Quantity</th>
+                  <th class="border-0 text-navy text-end pe-4">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in order.items %}
+                <tr class="border-top">
+                  <td class="ps-4">
+                    <div class="d-flex align-items-center">
+                      <div class="product-image-wrapper me-3">
+                        <img
+                          src="{{ item.product.image_url or url_for('static', filename='images/placeholder.jpg') }}"
+                          alt="{{ item.product.name }}"
+                          class="rounded border"
+                          style="width: 60px; height: 60px; object-fit: cover"
+                        />
+                      </div>
+                      <div>
+                        <h6 class="mb-1 text-navy">{{ item.product.name }}</h6>
+                        <small class="text-muted">
+                          SKU: {{ item.product.sku or 'N/A' }}
+                        </small>
+                        {% if item.product.discount_percentage > 0 %}
+                        <div class="mt-1">
+                          <span class="badge bg-yellow text-navy small">
+                            {{ item.product.discount_percentage }}% OFF
+                          </span>
+                        </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="text-navy fw-semibold">
+                      ₹{{ "%.2f"|format(item.price) }}
+                    </span>
+                    {% if item.product.discounted_price and
+                    item.product.discounted_price < item.product.price %}
+                    <br />
+                    <small class="text-muted text-decoration-line-through">
+                      ₹{{ "%.2f"|format(item.product.price) }}
+                    </small>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-light text-navy border fs-6">
+                      {{ item.quantity }}
+                    </span>
+                  </td>
+                  <td class="text-end pe-4">
+                    <span class="text-navy fw-bold fs-6">
+                      ₹{{ "%.2f"|format(item.subtotal) }}
+                    </span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Timeline -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light-navy">
+          <h5 class="mb-0 text-navy">
+            <i class="fas fa-history me-2 text-yellow"></i>
+            Order Timeline
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="order-timeline">
+            {% set timeline_events = [ {'status': 'confirmed', 'icon':
+            'check-circle', 'title': 'Order Confirmed', 'description': 'Your
+            order has been confirmed'}, {'status': 'processing', 'icon': 'cogs',
+            'title': 'Processing', 'description': 'We are preparing your
+            order'}, {'status': 'shipped', 'icon': 'shipping-fast', 'title':
+            'Shipped', 'description': 'Your order is on the way'}, {'status':
+            'delivered', 'icon': 'box-check', 'title': 'Delivered',
+            'description': 'Order delivered successfully'} ] %} {% for event in
+            timeline_events %}
+            <div
+              class="timeline-item {% if order.status == event.status %}active{% endif %}"
+            >
+              <div class="timeline-marker">
+                <i
+                  class="fas fa-{{ event.icon }} {% if order.status == event.status %}text-yellow{% else %}text-muted{% endif %}"
+                ></i>
+              </div>
+              <div class="timeline-content">
+                <h6
+                  class="mb-1 {% if order.status == event.status %}text-navy fw-bold{% else %}text-muted{% endif %}"
+                >
+                  {{ event.title }}
+                </h6>
+                <p class="mb-0 small text-muted">{{ event.description }}</p>
+                {% if order.status == event.status %}
+                <small class="text-yellow">
+                  <i class="fas fa-clock me-1"></i>
+                  {{ order.updated_at.strftime('%b %d, %Y at %I:%M %p') }}
+                </small>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <!-- Order Summary -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light-navy">
+          <h5 class="mb-0 text-navy">
+            <i class="fas fa-receipt me-2 text-yellow"></i>
+            Order Summary
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="order-summary">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="text-muted">Subtotal</span>
+              <span class="text-navy fw-semibold"
+                >₹{{ "%.2f"|format(order.get_subtotal()) }}</span
+              >
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="text-muted">Shipping</span>
+              <span class="text-navy fw-semibold"
+                >₹{{ "%.2f"|format(order.shipping_cost) }}</span
+              >
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="text-muted">Tax</span>
+              <span class="text-navy fw-semibold">
+                ₹{{ "%.2f"|format(order.total_amount - order.get_subtotal() -
+                order.shipping_cost) }}
+              </span>
+            </div>
+            <hr />
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="text-navy fw-bold fs-5">Grand Total</span>
+              <span class="text-navy fw-bold fs-5"
+                >₹{{ "%.2f"|format(order.total_amount) }}</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Information -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light-navy">
+          <h5 class="mb-0 text-navy">
+            <i class="fas fa-info-circle me-2 text-yellow"></i>
+            Order Information
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="order-info">
+            <div class="info-item mb-3">
+              <small class="text-muted d-block">Order ID</small>
+              <strong class="text-navy">{{ order.order_id }}</strong>
+            </div>
+            <div class="info-item mb-3">
+              <small class="text-muted d-block">Order Date</small>
+              <strong class="text-navy"
+                >{{ order.created_at.strftime('%B %d, %Y at %I:%M %p')
+                }}</strong
+              >
+            </div>
+            <div class="info-item mb-3">
+              <small class="text-muted d-block">Payment Method</small>
+              <strong class="text-navy text-uppercase"
+                >{{ order.payment_method }}</strong
+              >
+            </div>
+            <div class="info-item mb-3">
+              <small class="text-muted d-block">Payment Status</small>
+              <span
+                class="badge {% if order.payment_status == 'completed' %}bg-success{% else %}bg-warning text-dark{% endif %}"
+              >
+                {{ order.payment_status.upper() }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shipping Address -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light-navy">
+          <h5 class="mb-0 text-navy">
+            <i class="fas fa-map-marker-alt me-2 text-yellow"></i>
+            Shipping Address
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if order.shipping_address %}
+          <div class="shipping-address">
+            <p class="mb-2 text-navy">
+              <strong>{{ current_user.full_name or 'Customer' }}</strong>
+            </p>
+            <p class="mb-2 small text-muted" style="line-height: 1.4">
+              {{ order.shipping_address|replace('\n', '<br />')|safe }}
+            </p>
+            <p class="mb-0 small text-muted">
+              <i class="fas fa-phone me-1"></i>
+              {{ current_user.phone or 'N/A' }}
+            </p>
+          </div>
+          {% else %}
+          <p class="text-muted mb-0">No shipping address provided</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <a
+              href="{{ url_for('download_invoice', order_id=order.id) }}"
+              class="btn btn-navy btn-lg"
+            >
+              <i class="fas fa-download me-2"></i>
+              Download Invoice
+            </a>
+
+            {% if order.can_cancel() %}
+            <form
+              method="POST"
+              action="{{ url_for('cancel_order', order_id=order.id) }}"
+              class="d-grid"
+              onsubmit="return confirm('Are you sure you want to cancel this order? This action cannot be undone.');"
+            >
+              <button type="submit" class="btn btn-outline-danger btn-lg">
+                <i class="fas fa-times me-2"></i>
+                Cancel Order
+              </button>
+            </form>
+            {% endif %}
+
+            <a
+              href="{{ url_for('orders') }}"
+              class="btn btn-outline-navy btn-lg"
+            >
+              <i class="fas fa-arrow-left me-2"></i>
+              Back to Orders
+            </a>
+
+            <a
+              href="{{ url_for('track_order') }}?order_id={{ order.order_id }}"
+              class="btn btn-yellow btn-lg"
+            >
+              <i class="fas fa-truck me-2"></i>
+              Track Order
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code Section -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light-navy">
+          <h5 class="mb-0 text-navy">
+            <i class="fas fa-qrcode me-2 text-yellow"></i>
+            Order QR Code
+          </h5>
+        </div>
+        <div class="card-body text-center">
+          <div class="row align-items-center">
+            <div class="col-md-6">
+              <div class="qr-code-container mb-3">
+                <img
+                  src="{{ url_for('generate_qr_code', order_id=order.id) }}"
+                  alt="Order QR Code"
+                  class="img-fluid rounded border"
+                  style="max-width: 200px"
+                />
+              </div>
+              <p class="small text-muted mb-3">
+                Scan this QR code to verify your order details
+              </p>
+            </div>
+            <div class="col-md-6 text-md-start">
+              <h6 class="text-navy mb-3">Quick Actions</h6>
+              <div class="d-grid gap-2">
+                <a
+                  href="{{ url_for('download_invoice', order_id=order.id) }}"
+                  class="btn btn-outline-navy btn-sm"
+                >
+                  <i class="fas fa-file-pdf me-2"></i>Download PDF Invoice
+                </a>
+                <a
+                  href="{{ url_for('download_qr_code', order_id=order.id) }}"
+                  class="btn btn-outline-navy btn-sm"
+                >
+                  <i class="fas fa-download me-2"></i>Download QR Code
+                </a>
+                <a
+                  href="{{ url_for('print_receipt', order_id=order.id) }}"
+                  class="btn btn-outline-navy btn-sm"
+                  target="_blank"
+                >
+                  <i class="fas fa-print me-2"></i>Print Receipt
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block styles %}
+<style>
+  .bg-gradient-navy {
+    background: linear-gradient(135deg, #001f3f 0%, #003366 100%) !important;
+  }
+
+  .bg-light-navy {
+    background-color: rgba(0, 31, 63, 0.05) !important;
+    border-bottom: 1px solid rgba(0, 31, 63, 0.1);
+  }
+
+  .text-navy {
+    color: #001f3f !important;
+  }
+
+  .text-yellow {
+    color: #ffd700 !important;
+  }
+
+  .bg-yellow {
+    background: linear-gradient(135deg, #ffd700, #ffa500) !important;
+  }
+
+  .btn-navy {
+    background: linear-gradient(135deg, #001f3f, #003366);
+    border-color: #001f3f;
+    color: white;
+    font-weight: 600;
+  }
+
+  .btn-navy:hover {
+    background: #001a35;
+    border-color: #001a35;
+    color: white;
+  }
+
+  .btn-outline-navy {
+    border-color: #001f3f;
+    color: #001f3f;
+    font-weight: 500;
+  }
+
+  .btn-outline-navy:hover {
+    background: #001f3f;
+    border-color: #001f3f;
+    color: white;
+  }
+
+  .btn-yellow {
+    background: linear-gradient(135deg, #ffd700, #ffa500);
+    border-color: #ffd700;
+    color: #001f3f;
+    font-weight: 600;
+  }
+
+  .btn-yellow:hover {
+    background: #ffa500;
+    border-color: #ffa500;
+    color: #001f3f;
+  }
+
+  /* Order Timeline Styles */
+  .order-timeline {
+    position: relative;
+    padding-left: 30px;
+  }
+
+  .order-timeline::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+  }
+
+  .timeline-item {
+    position: relative;
+    padding: 20px 0;
+  }
+
+  .timeline-item.active .timeline-marker {
+    background: rgba(255, 215, 0, 0.1);
+    border-color: #ffd700;
+  }
+
+  .timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 20px;
+    width: 30px;
+    height: 30px;
+    border: 2px solid #dee2e6;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .timeline-content {
+    padding-left: 20px;
+  }
+
+  /* Product Image Hover Effect */
+  .product-image-wrapper {
+    transition: transform 0.2s ease;
+  }
+
+  .product-image-wrapper:hover {
+    transform: scale(1.05);
+  }
+
+  /* Badge Styles */
+  .badge.bg-yellow {
+    color: #001f3f !important;
+    font-weight: 600;
+  }
+
+  /* Table Styles */
+  .table th {
+    border-top: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .table td {
+    vertical-align: middle;
+    padding: 1rem 0.75rem;
+  }
+
+  /* Card Styles */
+  .card {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    border-bottom: 1px solid rgba(0, 31, 63, 0.1);
+    padding: 1rem 1.25rem;
+  }
+
+  /* Breadcrumb Styles */
+  .breadcrumb {
+    background: transparent;
+    padding: 0;
+  }
+
+  .breadcrumb-item.active {
+    color: #ffd700;
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 768px) {
+    .order-timeline {
+      padding-left: 25px;
+    }
+
+    .timeline-marker {
+      left: -25px;
+      width: 25px;
+      height: 25px;
+    }
+
+    .timeline-marker i {
+      font-size: 0.8rem;
+    }
+
+    .card-body {
+      padding: 1rem;
+    }
+  }
+
+  /* Hover Effects */
+  .table-hover tbody tr:hover {
+    background-color: rgba(0, 31, 63, 0.02);
+  }
+
+  .btn {
+    transition: all 0.3s ease;
+  }
+
+  /* QR Code Styles */
+  .qr-code-container {
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    display: inline-block;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+</style>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Add loading states to buttons
+    const buttons = document.querySelectorAll(".btn");
+    buttons.forEach((button) => {
+      button.addEventListener("click", function (e) {
+        if (this.type === "submit" || this.href) {
+          const originalText = this.innerHTML;
+          this.innerHTML =
+            '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+          this.disabled = true;
+
+          // Revert after 3 seconds if still on same page
+          setTimeout(() => {
+            if (this.disabled) {
+              this.innerHTML = originalText;
+              this.disabled = false;
+            }
+          }, 3000);
+        }
+      });
+    });
+
+    // Add smooth scrolling for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+      anchor.addEventListener("click", function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute("href"));
+        if (target) {
+          target.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      });
+    });
+
+    // Print functionality
+    document.querySelectorAll("[data-print]").forEach((button) => {
+      button.addEventListener("click", function () {
+        window.print();
+      });
+    });
+
+    // Copy order ID to clipboard
+    const copyOrderId = document.getElementById("copyOrderId");
+    if (copyOrderId) {
+      copyOrderId.addEventListener("click", function () {
+        const orderId = "{{ order.order_id }}";
+        navigator.clipboard.writeText(orderId).then(() => {
+          const originalHtml = this.innerHTML;
+          this.innerHTML = '<i class="fas fa-check me-2"></i>Copied!';
+          setTimeout(() => {
+            this.innerHTML = originalHtml;
+          }, 2000);
+        });
+      });
+    }
+  });
+
+  // Order status updates (simulated)
+  function simulateStatusUpdate() {
+    const statusElement = document.querySelector(".order-status-badge");
+    if (statusElement) {
+      statusElement.classList.add("pulse");
+      setTimeout(() => {
+        statusElement.classList.remove("pulse");
+      }, 1000);
+    }
+  }
+
+  // Check for status updates every 30 seconds
+  setInterval(simulateStatusUpdate, 30000);
+</script>
+{% endblock %}

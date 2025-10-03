@@ -1581,6 +1581,126 @@ def utility_processor():
         format_currency=format_currency,
         get_delivery_date=get_delivery_date
     )
+
+@app.route('/payment/<order_id>')
+@login_required
+def payment(order_id):
+    # Get cart items and calculate totals
+    cart_items = Cart.query.filter_by(user_id=current_user.id).all()
+    
+    if not cart_items:
+        flash('Your cart is empty', 'warning')
+        return redirect(url_for('cart'))
+    
+    subtotal = sum((item.product.discounted_price or item.product.price) * item.quantity for item in cart_items)
+    shipping = 50  # Fixed shipping cost
+    tax = subtotal * 0.18  # 18% GST
+    grand_total = subtotal + shipping + tax
+    
+    return render_template('main/payments.html', 
+                         cart_items=cart_items,
+                         subtotal=subtotal,
+                         shipping=shipping,
+                         tax=tax,
+                         grand_total=grand_total,
+                         order_id=order_id)
+
+@app.route('/handle_payment', methods=['POST'])
+@login_required
+def handle_payment():
+    """Process payment and create order"""
+    try:
+        cart_items = Cart.query.filter_by(user_id=current_user.id).all()
+        if not cart_items:
+            flash('Your cart is empty!', 'warning')
+            return redirect(url_for('cart'))
+        
+        totals = calculate_totals(cart_items)
+        
+        # Get payment method and details
+        payment_method = request.form.get('payment_method', 'card')
+        card_number = request.form.get('card_number', '').replace(' ', '')
+        
+        # Mock payment validation based on test card numbers
+        if payment_method == 'card':
+            if card_number == '4222222222222222':
+                flash('Payment failed. Please try with a different card.', 'danger')
+                return redirect(url_for('payment'))
+            elif card_number == '4333333333333333':
+                flash('Payment is pending. Please check your email for confirmation.', 'warning')
+                return redirect(url_for('payment'))
+        
+        # Create order
+        order_id = generate_order_id()
+        shipping_address = f"{current_user.full_name}\n{current_user.address}\n{current_user.city}, {current_user.state} - {current_user.pincode}"
+        
+        # Set payment status based on payment method
+        if payment_method == 'cod':
+            payment_status = 'pending'  # For COD, payment is pending until delivery
+        else:
+            payment_status = 'completed'  # For card/UPI, assume payment is completed
+        
+        # Create order object
+        order = Order(
+            order_id=order_id,
+            user_id=current_user.id,
+            total_amount=totals['grand_total'],
+            shipping_address=shipping_address,
+            payment_method=payment_method,
+            payment_status=payment_status,
+            status='confirmed'
+        )
+        db.session.add(order)
+        db.session.flush()  # This assigns an ID to the order without committing
+        
+        # Add order items
+        for cart_item in cart_items:
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=cart_item.product_id,
+                quantity=cart_item.quantity,
+                price=cart_item.product.discounted_price or cart_item.product.price
+            )
+            db.session.add(order_item)
+        
+        # Clear cart
+        Cart.query.filter_by(user_id=current_user.id).delete()
+        
+        # Commit all changes
+        db.session.commit()
+        
+        flash('Payment successful! Your order has been placed.', 'success')
+        return redirect(url_for('order_confirmation', order_id=order.id))
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Payment error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        flash('Payment failed. Please try again.', 'danger')
+        return redirect(url_for('payment'))
+
+@app.route('/help-center')
+def help_center():
+    """Help center page"""
+    return render_template('services/help.html')
+
+@app.route('/returns-policy')
+def returns_policy():  # Endpoint: 'returns_policy'
+    return render_template('services/returns.html')
+
+@app.route('/shipping-info')
+def shipping_info():  # Endpoint: 'shipping_info'
+    return render_template('services/shipping.html')
+
+@app.route('/shopping-guide')
+def shopping_guide():  # Endpoint: 'shopping_guide'
+    return render_template('services/guide.html')
+
+@app.route('/faqs')
+def faqs():  # Endpoint: 'faqs'
+    return render_template('services/FAQ.html')
+
 # Initialize database
 with app.app_context():
     db.create_all()

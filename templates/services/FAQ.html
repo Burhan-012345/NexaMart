@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FAQs - NexaMart</title>
+    <style>
+      :root {
+        --navy-blue: #001f3f;
+        --bright-yellow: #ffd700;
+        --light-gray: #f8f9fa;
+        --dark-gray: #333;
+        --white: #ffffff;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        line-height: 1.6;
+        color: var(--dark-gray);
+        background-color: var(--white);
+      }
+
+      .services-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .services-header {
+        background: linear-gradient(135deg, var(--navy-blue) 0%, #00264d 100%);
+        color: var(--white);
+        padding: 60px 20px;
+        text-align: center;
+        border-radius: 10px;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .services-header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: var(--bright-yellow);
+        opacity: 0.1;
+        border-radius: 50%;
+        transform: translate(100px, -100px);
+      }
+
+      .services-header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        position: relative;
+        z-index: 2;
+      }
+
+      .services-header p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        max-width: 600px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 2;
+      }
+
+      .search-section {
+        background: var(--white);
+        border: 2px solid var(--navy-blue);
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 30px;
+        text-align: center;
+      }
+
+      .search-box {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 15px 20px;
+        border: 2px solid var(--navy-blue);
+        border-radius: 25px;
+        font-size: 1rem;
+        margin-bottom: 15px;
+      }
+
+      .faq-categories {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+      }
+
+      .category-card {
+        background: var(--white);
+        border: 2px solid var(--navy-blue);
+        border-radius: 10px;
+        padding: 25px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+
+      .category-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 31, 63, 0.2);
+        border-color: var(--bright-yellow);
+      }
+
+      .category-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        color: var(--bright-yellow);
+      }
+
+      .category-card h3 {
+        color: var(--navy-blue);
+        margin-bottom: 10px;
+      }
+
+      .faq-section {
+        background: var(--white);
+        border: 2px solid var(--navy-blue);
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 30px;
+      }
+
+      .faq-category-title {
+        color: var(--navy-blue);
+        text-align: center;
+        margin-bottom: 25px;
+        font-size: 1.8rem;
+        padding-bottom: 10px;
+        border-bottom: 3px solid var(--bright-yellow);
+      }
+
+      .faq-item {
+        border-bottom: 1px solid #eee;
+        margin-bottom: 15px;
+      }
+
+      .faq-question {
+        color: var(--navy-blue);
+        font-weight: bold;
+        cursor: pointer;
+        padding: 15px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: color 0.3s ease;
+      }
+
+      .faq-question:hover {
+        color: #00264d;
+      }
+
+      .faq-answer {
+        color: var(--dark-gray);
+        padding: 0 0 15px 0;
+        display: none;
+        line-height: 1.7;
+      }
+
+      .contact-prompt {
+        background: linear-gradient(135deg, var(--navy-blue) 0%, #00264d 100%);
+        color: var(--white);
+        padding: 40px;
+        border-radius: 10px;
+        text-align: center;
+        margin-top: 30px;
+      }
+
+      .contact-prompt h3 {
+        margin-bottom: 15px;
+        color: var(--bright-yellow);
+      }
+
+      .btn-primary {
+        background: var(--bright-yellow);
+        color: var(--navy-blue);
+        padding: 12px 30px;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 15px;
+        transition: all 0.3s ease;
+      }
+
+      .btn-primary:hover {
+        background: #ffed4a;
+        transform: translateY(-2px);
+      }
+
+      @media (max-width: 768px) {
+        .services-header h1 {
+          font-size: 2rem;
+        }
+
+        .faq-categories {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="services-container">
+      <div class="services-header">
+        <h1>Frequently Asked Questions</h1>
+        <p>Quick answers to your most common questions</p>
+      </div>
+
+      <div class="search-section">
+        <div class="search-box">
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Search for answers..."
+          />
+          <button class="btn-primary">Search FAQs</button>
+        </div>
+      </div>
+
+      <div class="faq-categories">
+        <div class="category-card" onclick="scrollToCategory('ordering')">
+          <div class="category-icon">🛒</div>
+          <h3>Ordering</h3>
+          <p>Placing orders & modifications</p>
+        </div>
+
+        <div class="category-card" onclick="scrollToCategory('shipping')">
+          <div class="category-icon">🚚</div>
+          <h3>Shipping & Delivery</h3>
+          <p>Delivery times & tracking</p>
+        </div>
+
+        <div class="category-card" onclick="scrollToCategory('returns')">
+          <div class="category-icon">🔄</div>
+          <h3>Returns & Refunds</h3>
+          <p>Return policy & refund process</p>
+        </div>
+
+        <div class="category-card" onclick="scrollToCategory('payments')">
+          <div class="category-icon">💳</div>
+          <h3>Payments</h3>
+          <p>Billing & payment methods</p>
+        </div>
+      </div>
+
+      <div class="faq-section" id="ordering">
+        <h2 class="faq-category-title">Ordering Questions</h2>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            How do I place an order?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            To place an order, simply browse our products, add items to your
+            cart, and proceed to checkout. You'll need to create an account or
+            log in, enter your shipping address, select a payment method, and
+            confirm your order.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            Can I modify or cancel my order?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            You can modify or cancel your order within 1 hour of placing it.
+            After that, the order enters processing and cannot be changed.
+            Contact our customer service immediately if you need to make changes
+            after the 1-hour window.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            How do I use promo codes?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            Enter your promo code in the designated field during checkout. The
+            discount will be automatically applied to your order total. Make
+            sure to check the terms and conditions of the promo code for
+            validity and restrictions.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-section" id="shipping">
+        <h2 class="faq-category-title">Shipping & Delivery</h2>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            What are your delivery options?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            We offer Standard (3-5 days), Express (1-2 days), and Same-Day
+            delivery (in select cities). Delivery charges vary based on the
+            option you choose and your location. Free standard shipping is
+            available on orders over ₹999.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            How can I track my order?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            You can track your order by logging into your account and visiting
+            the 'Order History' section. You'll also receive tracking
+            information via email and SMS once your order is shipped.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            Do you deliver to my area?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            We deliver to over 25,000+ pin codes across India. During checkout,
+            enter your pin code to check delivery availability. Some remote
+            areas may have longer delivery times or additional charges.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-section" id="returns">
+        <h2 class="faq-category-title">Returns & Refunds</h2>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            What is your return policy?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            We offer a 30-day return policy for most items. Products must be
+            unused, in original packaging, and with all tags attached. Some
+            items like perishable goods, intimate apparel, and personalized
+            products cannot be returned.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            How long do refunds take?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            Refunds are processed within 5-7 business days after we receive your
+            returned item. The time it takes for the refund to reflect in your
+            account depends on your payment method and bank processing times.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            Who pays for return shipping?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            We provide free return shipping for all eligible returns. You'll
+            receive a prepaid return label that you can use to send the item
+            back to us at no cost.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-section" id="payments">
+        <h2 class="faq-category-title">Payments & Billing</h2>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            What payment methods do you accept?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            We accept all major credit/debit cards, UPI payments, net banking,
+            and cash on delivery (for orders under ₹5000). All payments are
+            processed through secure, encrypted channels.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            Is it safe to use my credit card?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            Yes, we use industry-standard SSL encryption to protect your payment
+            information. We don't store your complete card details on our
+            servers, ensuring your financial information remains secure.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            Why was my payment declined?
+            <span>+</span>
+          </div>
+          <div class="faq-answer">
+            Payment declines can occur due to insufficient funds, incorrect card
+            details, bank security filters, or technical issues. Contact your
+            bank for specific reasons or try an alternative payment method.
+          </div>
+        </div>
+      </div>
+
+      <div class="contact-prompt">
+        <h3>Still Have Questions?</h3>
+        <p>
+          Our customer support team is available 24/7 to help you with any other
+          questions
+        </p>
+        <a href="{{ url_for('help_center') }}" class="btn-primary"
+          >Contact Support</a
+        >
+      </div>
+    </div>
+
+    <script>
+      // FAQ toggle functionality
+      document.querySelectorAll(".faq-question").forEach((question) => {
+        question.addEventListener("click", () => {
+          const answer = question.nextElementSibling;
+          const isVisible = answer.style.display === "block";
+
+          // Toggle current answer
+          if (!isVisible) {
+            answer.style.display = "block";
+            question.querySelector("span").textContent = "−";
+          } else {
+            answer.style.display = "none";
+            question.querySelector("span").textContent = "+";
+          }
+        });
+      });
+
+      // Category scrolling function
+      function scrollToCategory(categoryId) {
+        const element = document.getElementById(categoryId);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+
+      // Search functionality
+      document
+        .querySelector(".btn-primary")
+        .addEventListener("click", function () {
+          const searchTerm = document
+            .querySelector(".search-input")
+            .value.toLowerCase();
+          const faqItems = document.querySelectorAll(".faq-item");
+          let found = false;
+
+          faqItems.forEach((item) => {
+            const question = item
+              .querySelector(".faq-question")
+              .textContent.toLowerCase();
+            const answer = item
+              .querySelector(".faq-answer")
+              .textContent.toLowerCase();
+
+            if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+              item.style.display = "block";
+              found = true;
+              // Open the answer
+              item.querySelector(".faq-answer").style.display = "block";
+              item.querySelector(".faq-question span").textContent = "−";
+            } else {
+              item.style.display = "none";
+            }
+          });
+
+          if (!found && searchTerm) {
+            alert(
+              "No matching questions found. Try different keywords or contact our support team."
+            );
+          } else if (!searchTerm) {
+            // Reset all items if search is empty
+            faqItems.forEach((item) => {
+              item.style.display = "block";
+              item.querySelector(".faq-answer").style.display = "none";
+              item.querySelector(".faq-question span").textContent = "+";
+            });
+          }
+        });
+
+      // Allow Enter key to trigger search
+      document
+        .querySelector(".search-input")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            document.querySelector(".btn-primary").click();
+          }
+        });
+    </script>
+  </body>
+</html>

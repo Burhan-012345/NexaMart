@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Returns & Refunds - NexaMart</title>
+    <style>
+      :root {
+        --navy-blue: #001f3f;
+        --bright-yellow: #ffd700;
+        --light-gray: #f8f9fa;
+        --dark-gray: #333;
+        --white: #ffffff;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        line-height: 1.6;
+        color: var(--dark-gray);
+        background-color: var(--white);
+      }
+
+      .services-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .services-header {
+        background: linear-gradient(135deg, var(--navy-blue) 0%, #00264d 100%);
+        color: var(--white);
+        padding: 60px 20px;
+        text-align: center;
+        border-radius: 10px;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .services-header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: var(--bright-yellow);
+        opacity: 0.1;
+        border-radius: 50%;
+        transform: translate(100px, -100px);
+      }
+
+      .services-header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        position: relative;
+        z-index: 2;
+      }
+
+      .services-header p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        max-width: 600px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 2;
+      }
+
+      .services-content {
+        display: grid;
+        gap: 30px;
+      }
+
+      .policy-section {
+        background: var(--white);
+        border: 2px solid var(--navy-blue);
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0, 31, 63, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .policy-section:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 31, 63, 0.2);
+      }
+
+      .policy-section h2 {
+        color: var(--navy-blue);
+        font-size: 1.8rem;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 3px solid var(--bright-yellow);
+      }
+
+      .policy-points {
+        list-style: none;
+        padding: 0;
+      }
+
+      .policy-points li {
+        padding: 15px 0;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+      }
+
+      .policy-points li:last-child {
+        border-bottom: none;
+      }
+
+      .point-icon {
+        color: var(--bright-yellow);
+        font-weight: bold;
+        font-size: 1.2rem;
+        min-width: 25px;
+      }
+
+      .point-content h4 {
+        color: var(--navy-blue);
+        margin-bottom: 5px;
+        font-size: 1.1rem;
+      }
+
+      .point-content p {
+        color: var(--dark-gray);
+        line-height: 1.6;
+      }
+
+      .timeline {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 30px 0;
+        position: relative;
+      }
+
+      .timeline::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--bright-yellow);
+        transform: translateY(-50%);
+      }
+
+      .timeline-step {
+        background: var(--navy-blue);
+        color: var(--white);
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        position: relative;
+        z-index: 2;
+      }
+
+      .contact-box {
+        background: linear-gradient(135deg, var(--navy-blue) 0%, #00264d 100%);
+        color: var(--white);
+        padding: 30px;
+        border-radius: 10px;
+        text-align: center;
+        margin-top: 30px;
+      }
+
+      .contact-box h3 {
+        margin-bottom: 15px;
+        color: var(--bright-yellow);
+      }
+
+      .btn-primary {
+        background: var(--bright-yellow);
+        color: var(--navy-blue);
+        padding: 12px 30px;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 15px;
+        transition: all 0.3s ease;
+      }
+
+      .btn-primary:hover {
+        background: #ffed4a;
+        transform: translateY(-2px);
+      }
+
+      @media (max-width: 768px) {
+        .services-header h1 {
+          font-size: 2rem;
+        }
+
+        .policy-section {
+          padding: 20px;
+        }
+
+        .timeline {
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .timeline::before {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="services-container">
+      <div class="services-header">
+        <h1>Returns & Refunds Policy</h1>
+        <p>Hassle-free returns and quick refunds for your peace of mind</p>
+      </div>
+
+      <div class="services-content">
+        <div class="policy-section">
+          <h2>Return Policy Overview</h2>
+          <ul class="policy-points">
+            <li>
+              <span class="point-icon">✓</span>
+              <div class="point-content">
+                <h4>30-Day Return Window</h4>
+                <p>
+                  You can return most items within 30 days of delivery for a
+                  full refund
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="point-icon">✓</span>
+              <div class="point-content">
+                <h4>Free Returns</h4>
+                <p>We offer free return shipping on all eligible items</p>
+              </div>
+            </li>
+            <li>
+              <span class="point-icon">✓</span>
+              <div class="point-content">
+                <h4>Easy Process</h4>
+                <p>
+                  Initiate returns directly from your order history with just a
+                  few clicks
+                </p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="policy-section">
+          <h2>Return Process Timeline</h2>
+          <div class="timeline">
+            <div class="timeline-step">1</div>
+            <div class="timeline-step">2</div>
+            <div class="timeline-step">3</div>
+            <div class="timeline-step">4</div>
+          </div>
+          <ul class="policy-points">
+            <li>
+              <span class="point-icon">1</span>
+              <div class="point-content">
+                <h4>Initiate Return</h4>
+                <p>
+                  Go to your order history and select the item you want to
+                  return
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="point-icon">2</span>
+              <div class="point-content">
+                <h4>Print Label</h4>
+                <p>Download and print the prepaid return shipping label</p>
+              </div>
+            </li>
+            <li>
+              <span class="point-icon">3</span>
+              <div class="point-content">
+                <h4>Ship Item</h4>
+                <p>
+                  Pack the item securely and drop it at any authorized shipping
+                  center
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="point-icon">4</span>
+              <div class="point-content">
+                <h4>Receive Refund</h4>
+                <p>
+                  Get your refund processed within 5-7 business days after we
+                  receive the item
+                </p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="policy-section">
+          <h2>Refund Details</h2>
+          <ul class="policy-points">
+            <li>
+              <span class="point-icon">⏱️</span>
+              <div class="point-content">
+                <h4>Processing Time</h4>
+                <p>
+                  Refunds are processed within 5-7 business days after we
+                  receive your return
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="point-icon">💳</span>
+              <div class="point-content">
+                <h4>Payment Method</h4>
+                <p>Refunds are issued to your original payment method</p>
+              </div>
+            </li>
+            <li>
+              <span class="point-icon">🚫</span>
+              <div class="point-content">
+                <h4>Non-Returnable Items</h4>
+                <p>
+                  Some items like perishable goods, intimate apparel, and
+                  personalized items cannot be returned
+                </p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="contact-box">
+        <h3>Need Help With Returns?</h3>
+        <p>
+          Our customer service team is here to assist you with any
+          return-related questions
+        </p>
+        <a href="{{ url_for('help_center') }}" class="btn-primary"
+          >Contact Support</a
+        >
+      </div>
+    </div>
+  </body>
+</html>

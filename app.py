@@ -64,10 +64,10 @@ def utility_processor():
 @app.route('/')
 def index():
     categories = Category.query.limit(6).all()
-    
+
     # Featured products - could be based on sales, views, or manual selection
     featured_products = Product.query.filter_by(is_active=True).order_by(desc(Product.id)).limit(8).all()
-    
+
     # Personalized recommendations for logged-in users
     recommended_products = []
     if current_user.is_authenticated:
@@ -77,7 +77,7 @@ def index():
         for order in user_orders:
             for item in order.items:
                 ordered_category_ids.add(item.product.category_id)
-        
+
         if ordered_category_ids:
             recommended_products = Product.query.filter(
                 Product.category_id.in_(ordered_category_ids),
@@ -86,14 +86,14 @@ def index():
         else:
             # Fallback to random products if no order history
             recommended_products = Product.query.filter_by(is_active=True).order_by(func.random()).limit(4).all()
-    
+
     # Recently viewed products (simplified - you might want to store this in session or database)
     recently_viewed = []
     if current_user.is_authenticated:
         recently_viewed = Product.query.filter_by(is_active=True).order_by(func.random()).limit(4).all()
-    
-    return render_template('main/index.html', 
-                         categories=categories, 
+
+    return render_template('main/index.html',
+                         categories=categories,
                          featured_products=featured_products,
                          recommended_products=recommended_products,
                          recently_viewed=recently_viewed)
@@ -104,13 +104,13 @@ def search_suggestions():
     query = request.args.get('q', '').strip()
     if len(query) < 2:
         return jsonify({'products': []})
-    
+
     # Search in product names and descriptions
     products = Product.query.filter(
         Product.is_active == True,
         (Product.name.ilike(f'%{query}%') | Product.description.ilike(f'%{query}%'))
     ).limit(5).all()
-    
+
     suggestions = []
     for product in products:
         suggestions.append({
@@ -119,7 +119,7 @@ def search_suggestions():
             'price': format_currency(product.current_price),
             'image_url': product.image_url or '/static/images/placeholder.jpg'
         })
-    
+
     return jsonify({'products': suggestions})
 
 @app.route('/api/trending-products')
@@ -127,7 +127,7 @@ def trending_products():
     # This could be based on actual sales data, views, etc.
     # For now, return random products as trending
     trending = Product.query.filter_by(is_active=True).order_by(func.random()).limit(8).all()
-    
+
     products = []
     for product in trending:
         products.append({
@@ -138,7 +138,7 @@ def trending_products():
             'discounted_price': product.discounted_price,
             'image_url': product.image_url or '/static/images/placeholder.jpg'
         })
-    
+
     return jsonify({'products': products})
 
 # Update the add_to_cart route to support AJAX requests
@@ -147,17 +147,17 @@ def trending_products():
 def add_to_cart(product_id):
     product = Product.query.get_or_404(product_id)
     quantity = int(request.form.get('quantity', 1))
-    
+
     cart_item = Cart.query.filter_by(user_id=current_user.id, product_id=product_id).first()
-    
+
     if cart_item:
         cart_item.quantity += quantity
     else:
         cart_item = Cart(user_id=current_user.id, product_id=product_id, quantity=quantity)
         db.session.add(cart_item)
-    
+
     db.session.commit()
-    
+
     # Return JSON response for AJAX requests
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         cart_count = current_user.get_cart_count()
@@ -166,28 +166,28 @@ def add_to_cart(product_id):
             'message': 'Product added to cart!',
             'cart_count': cart_count
         })
-    
+
     flash('Product added to cart!', 'success')
     return redirect(request.referrer or url_for('index'))
 
 @app.route('/categories')
 def categories():
     categories = Category.query.all()
-    
+
     # Calculate additional statistics
     total_products = Product.query.filter_by(is_active=True).count()
     active_categories = Category.query.filter_by(is_active=True).count()
     featured_products_count = Product.query.filter_by(is_active=True).count()  # You can modify this logic
-    
+
     # Add product count to each category
     for category in categories:
         category.product_count = Product.query.filter_by(
-            category_id=category.id, 
+            category_id=category.id,
             is_active=True
         ).count()
         category.active_products = category.product_count
-    
-    return render_template('main/categories.html', 
+
+    return render_template('main/categories.html',
                          categories=categories,
                          total_products=total_products,
                          active_categories=active_categories,
@@ -198,14 +198,14 @@ def categories():
 def category_products(category_id):
     category = Category.query.get_or_404(category_id)
     products = Product.query.filter_by(category_id=category_id, is_active=True).all()
-    
+
     # Add additional product data for filtering
     for product in products:
         # Simulate average rating and review count (you'd typically have this in your database)
         product.average_rating = round(random.uniform(3.5, 5.0), 1)
         product.review_count = random.randint(10, 500)
         product.in_wishlist = False  # You'd check if current user has this in wishlist
-    
+
     return render_template('main/category_products.html', category=category, products=products)
 
 # Add wishlist routes
@@ -213,16 +213,16 @@ def category_products(category_id):
 @login_required
 def add_to_wishlist(product_id):
     product = Product.query.get_or_404(product_id)
-    
+
     # Check if already in wishlist
     existing = Wishlist.query.filter_by(user_id=current_user.id, product_id=product_id).first()
     if existing:
         return jsonify({'success': False, 'message': 'Product already in wishlist'})
-    
+
     wishlist_item = Wishlist(user_id=current_user.id, product_id=product_id)
     db.session.add(wishlist_item)
     db.session.commit()
-    
+
     return jsonify({'success': True, 'message': 'Product added to wishlist'})
 
 @app.route('/remove_from_wishlist/<int:product_id>', methods=['POST'])
@@ -233,19 +233,19 @@ def remove_from_wishlist(product_id):
         db.session.delete(wishlist_item)
         db.session.commit()
         return jsonify({'success': True, 'message': 'Product removed from wishlist'})
-    
+
     return jsonify({'success': False, 'message': 'Product not in wishlist'})
 
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
     product = Product.query.get_or_404(product_id)
-    
+
     # Add sample data for demonstration
     if not product.average_rating:
         product.average_rating = round(random.uniform(3.5, 5.0), 1)
     if not product.review_count:
         product.review_count = random.randint(50, 500)
-    
+
     return render_template('main/product_detail.html', product=product)
 
 # Add API routes for reviews and questions
@@ -279,50 +279,50 @@ def get_product_questions(product_id):
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    
+
     if request.method == 'POST':
         email = request.form.get('email')
         phone = request.form.get('phone')
         password = request.form.get('password')
         otp = request.form.get('otp')
-        
+
         # Clean phone number for checking
         phone_digits = ''.join(filter(str.isdigit, phone))
         if phone_digits.startswith('91') and len(phone_digits) == 12:
             phone_digits = phone_digits[2:]
         elif len(phone_digits) > 10:
             phone_digits = phone_digits[-10:]
-        
+
         # Check if user already exists
         if User.query.filter_by(email=email).first():
             flash('Email already registered!', 'danger')
             return render_template('auth/register.html', email=email, phone=phone)
-        
+
         if User.query.filter_by(phone=phone_digits).first():
             flash('Phone number already registered!', 'danger')
             return render_template('auth/register.html', email=email, phone=phone)
-        
+
         # Debug: Check session and OTP record
         print(f"DEBUG: Session register_otp_sent = {session.get('register_otp_sent')}")
         print(f"DEBUG: Session register_email = {session.get('register_email')}")
         print(f"DEBUG: Form email = {email}")
         print(f"DEBUG: OTP entered = {otp}")
-        
+
         if session.get('register_otp_sent') and session.get('register_email') == email:
             # Find the most recent OTP record for this email and purpose
             otp_record = OTPVerification.query.filter_by(
-                email=email, 
+                email=email,
                 purpose='register',
                 verified=False
             ).order_by(OTPVerification.created_at.desc()).first()
-            
+
             print(f"DEBUG: OTP record found = {otp_record is not None}")
             if otp_record:
                 print(f"DEBUG: OTP expected = {otp_record.otp}")
                 print(f"DEBUG: OTP expires at = {otp_record.expires_at}")
                 print(f"DEBUG: Current time = {datetime.utcnow()}")
                 print(f"DEBUG: Is OTP valid? = {datetime.utcnow() < otp_record.expires_at}")
-            
+
             if otp_record and otp_record.otp == otp and datetime.utcnow() < otp_record.expires_at:
                 # OTP verified, create user
                 hashed_password = generate_password_hash(password)
@@ -330,7 +330,7 @@ def register():
                 db.session.add(user)
                 otp_record.verified = True
                 db.session.commit()
-                
+
                 flash('Registration successful! Please login.', 'success')
                 session.pop('register_otp_sent', None)
                 session.pop('register_email', None)
@@ -344,38 +344,38 @@ def register():
                     flash('OTP has expired! Please request a new OTP.', 'danger')
         else:
             flash('Please request OTP first!', 'danger')
-        
+
         return render_template('auth/register.html', email=email, phone=phone)
-    
+
     return render_template('auth/register.html')
 
 @app.route('/send_register_otp', methods=['POST'])
 def send_register_otp():
     try:
         print("🟡 OTP request received")
-        
+
         # Check if request contains JSON data
         if not request.is_json:
             print("❌ Request is not JSON")
             return jsonify({'success': False, 'message': 'Invalid request format'})
-        
+
         data = request.get_json()
         print(f"📦 Request data: {data}")
-            
+
         email = data.get('email', '').strip().lower()
         phone = data.get('phone', '').strip()
-        
+
         print(f"📧 Email: {email}")
         print(f"📱 Original phone: {phone}")
-        
+
         if not email or not phone:
             print("❌ Missing email or phone")
             return jsonify({'success': False, 'message': 'Email and phone are required!'})
-        
+
         # Validate email format
         if '@' not in email or '.' not in email:
             return jsonify({'success': False, 'message': 'Invalid email format!'})
-        
+
         # Improved phone validation - handle various formats
         phone_digits = ''.join(filter(str.isdigit, phone))
 
@@ -391,46 +391,46 @@ def send_register_otp():
 
         if len(phone_digits) != 10:
             return jsonify({
-                'success': False, 
+                'success': False,
                 'message': 'Invalid phone number! Please use a 10-digit Indian number (with or without +91). Example: 7019670262 or +917019670262'
             })
 
         # Format phone for display and storage
         formatted_phone = f"+91{phone_digits}"
         phone_for_storage = phone_digits  # Store without +91 in database
-        
+
         print(f"📱 Formatted phone: {formatted_phone}")
         print(f"📱 Phone for storage: {phone_for_storage}")
-        
+
         # Check if user already exists
         existing_user_email = User.query.filter_by(email=email).first()
         existing_user_phone = User.query.filter_by(phone=phone_for_storage).first()
-        
+
         if existing_user_email:
             print(f"❌ Email already exists: {email}")
             return jsonify({'success': False, 'message': 'Email already registered!'})
-        
+
         if existing_user_phone:
             print(f"❌ Phone already exists: {phone_for_storage}")
             return jsonify({'success': False, 'message': 'Phone number already registered!'})
-        
+
         # Generate OTP
         otp = generate_otp()
         expires_at = datetime.utcnow() + timedelta(minutes=10)
         print(f"🔐 Generated OTP: {otp}")
-        
+
         # Save OTP to database
         try:
             # Expire any existing OTPs
             existing_otps = OTPVerification.query.filter_by(
-                email=email, 
+                email=email,
                 purpose='register',
                 verified=False
             ).all()
-            
+
             for existing_otp in existing_otps:
                 existing_otp.expires_at = datetime.utcnow()
-            
+
             # Create new OTP record
             otp_record = OTPVerification(
                 email=email,
@@ -442,36 +442,36 @@ def send_register_otp():
             db.session.add(otp_record)
             db.session.commit()
             print("✅ OTP saved to database")
-            
+
         except Exception as db_error:
             print(f"❌ Database error: {str(db_error)}")
             db.session.rollback()
             return jsonify({'success': False, 'message': 'Database error. Please try again.'})
-        
+
         # Send OTP via SMS and Email
         print("🟡 Attempting to send OTP...")
-        
+
         sms_sent = False
         email_sent = False
-        
+
         try:
             # Use the formatted phone with +91 for SMS
             sms_sent = send_sms_otp(formatted_phone, otp)
             print(f"📱 SMS sent: {sms_sent}")
         except Exception as sms_error:
             print(f"❌ SMS error: {str(sms_error)}")
-        
+
         try:
             email_sent = send_email_otp(email, otp, 'registration')
             print(f"📧 Email sent: {email_sent}")
         except Exception as email_error:
             print(f"❌ Email error: {str(email_error)}")
-        
+
         # Set session variables
         session['register_otp_sent'] = True
         session['register_email'] = email
         session['register_phone'] = phone_for_storage  # Store without +91
-        
+
         # Return appropriate response
         if sms_sent and email_sent:
             message = 'OTP sent to your mobile and email!'
@@ -481,25 +481,25 @@ def send_register_otp():
             message = 'OTP sent to your email!'
         else:
             message = f'OTP: {otp} (Check terminal for testing)'
-        
+
         print(f"✅ OTP process completed: {message}")
-        
+
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': message,
             'debug_otp': otp  # Remove in production
         })
-            
+
     except Exception as e:
         print(f"❌ CRITICAL ERROR in send_register_otp: {str(e)}")
         import traceback
         traceback.print_exc()  # This will show the full stack trace
-        
+
         return jsonify({
-            'success': False, 
+            'success': False,
             'message': 'Server error. Please try again.'
         })
-    
+
 @app.route('/debug/check-db')
 def debug_check_db():
     """Check database connection"""
@@ -529,18 +529,18 @@ def debug_test_otp_flow():
     test_email = "test@example.com"
     test_phone = "9876543210"
     otp = generate_otp()
-    
+
     print(f"🧪 Testing OTP flow:")
     print(f"📧 Email: {test_email}")
-    print(f"📱 Phone: {test_phone}") 
+    print(f"📱 Phone: {test_phone}")
     print(f"🔐 OTP: {otp}")
-    
+
     # Test SMS
     sms_result = send_sms_otp(test_phone, otp)
-    
+
     # Test Email
     email_result = send_email_otp(test_email, otp)
-    
+
     return jsonify({
         'sms_result': sms_result,
         'email_result': email_result,
@@ -567,7 +567,7 @@ def debug_users():
             'created_at': user.created_at.strftime('%Y-%m-%d %H:%M:%S')
         })
     return jsonify({'users': user_list})
-    
+
 @app.route('/debug/send_test_email')
 def debug_send_test_email():
     """Debug route to test email sending"""
@@ -589,18 +589,18 @@ def debug_send_test_sms():
         return jsonify({'success': success, 'otp': otp, 'phone': test_phone})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-    
+
 @app.route('/test-sms')
 def test_sms():
     """Test SMS functionality"""
     test_phone = "+919876543210"  # Replace with your test number
     otp = generate_otp()
-    
+
     print(f"🧪 Testing SMS to: {test_phone}")
     print(f"🔐 Test OTP: {otp}")
-    
+
     success = send_sms_otp(test_phone, otp)
-    
+
     return jsonify({
         'success': success,
         'phone': test_phone,
@@ -613,12 +613,12 @@ def test_email():
     """Test Email functionality"""
     test_email = "test@example.com"  # Replace with your test email
     otp = generate_otp()
-    
+
     print(f"🧪 Testing Email to: {test_email}")
     print(f"🔐 Test OTP: {otp}")
-    
+
     success = send_email_otp(test_email, otp, 'registration')
-    
+
     return jsonify({
         'success': success,
         'email': test_email,
@@ -630,14 +630,14 @@ def test_email():
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    
+
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
         remember = True if request.form.get('remember') else False
-        
+
         user = User.query.filter_by(email=email).first()
-        
+
         if user and check_password_hash(user.password, password):
             login_user(user, remember=remember)
             next_page = request.args.get('next')
@@ -645,7 +645,7 @@ def login():
             return redirect(next_page) if next_page else redirect(url_for('index'))
         else:
             flash('Login failed. Check email and password!', 'danger')
-    
+
     return render_template('auth/login.html')
 
 @app.route('/reset_password', methods=['GET', 'POST'])
@@ -657,7 +657,7 @@ def reset_password():
             return handle_password_change()
         else:
             return handle_password_reset()
-    
+
     # GET request - show appropriate form
     if current_user.is_authenticated:
         # For logged-in users, redirect to profile security tab
@@ -673,29 +673,29 @@ def handle_password_change():
         current_password = request.form.get('current_password')
         new_password = request.form.get('new_password')
         confirm_password = request.form.get('confirm_password')
-        
+
         # Validate inputs
         if not all([current_password, new_password, confirm_password]):
             flash('All fields are required!', 'danger')
             return redirect(url_for('profile'))
-        
+
         # Check if new passwords match
         if new_password != confirm_password:
             flash('New passwords do not match!', 'danger')
             return redirect(url_for('profile'))
-        
+
         # Verify current password
         if not check_password_hash(current_user.password, current_password):
             flash('Current password is incorrect!', 'danger')
             return redirect(url_for('profile'))
-        
+
         # Update password
         current_user.password = generate_password_hash(new_password)
         db.session.commit()
-        
+
         flash('Password changed successfully!', 'success')
         return redirect(url_for('profile'))
-        
+
     except Exception as e:
         db.session.rollback()
         flash('Error changing password. Please try again.', 'danger')
@@ -706,13 +706,13 @@ def handle_password_reset():
     email = request.form.get('email')
     otp = request.form.get('otp')
     new_password = request.form.get('new_password')
-    
+
     user = User.query.filter_by(email=email).first()
-    
+
     if not user:
         flash('Email not found!', 'danger')
         return render_template('auth/reset_password.html', email=email)
-    
+
     if 'reset_otp_sent' in session and session.get('reset_email') == email:
         if otp and not new_password:
             # Verify OTP
@@ -721,7 +721,7 @@ def handle_password_reset():
                 purpose='reset_password',
                 verified=False
             ).first()
-            
+
             if otp_record and otp_record.otp == otp and datetime.utcnow() < otp_record.expires_at:
                 otp_record.verified = True
                 db.session.commit()
@@ -733,33 +733,33 @@ def handle_password_reset():
             # Set new password
             user.password = generate_password_hash(new_password)
             db.session.commit()
-            
+
             session.pop('reset_otp_sent', None)
             session.pop('reset_email', None)
             session.pop('reset_otp_verified', None)
-            
+
             flash('Password reset successful! Please login.', 'success')
             return redirect(url_for('login'))
     else:
         flash('Please request OTP first!', 'danger')
-    
+
     return render_template('auth/reset_password.html', email=email)
 
 @app.route('/send_reset_otp', methods=['POST'])
 def send_reset_otp():
     email = request.json.get('email')
-    
+
     if not email:
         return jsonify({'success': False, 'message': 'Email is required!'})
-    
+
     user = User.query.filter_by(email=email).first()
     if not user:
         return jsonify({'success': False, 'message': 'Email not found!'})
-    
+
     # Generate and send OTP
     otp = generate_otp()
     expires_at = datetime.utcnow() + timedelta(minutes=10)
-    
+
     otp_record = OTPVerification(
         email=email,
         otp=otp,
@@ -768,7 +768,7 @@ def send_reset_otp():
     )
     db.session.add(otp_record)
     db.session.commit()
-    
+
     # Send Email OTP
     if send_email_otp(email, otp, 'reset'):
         session['reset_otp_sent'] = True
@@ -789,8 +789,8 @@ def logout():
 def profile():
     addresses = Address.query.filter_by(user_id=current_user.id).all()
     orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
-    
-    return render_template('main/profile.html', 
+
+    return render_template('main/profile.html',
                      addresses=addresses,
                      orders=orders,
                      wishlist_count=current_user.get_wishlist_count())
@@ -803,7 +803,7 @@ def update_profile():
     current_user.city = request.form.get('city')
     current_user.state = request.form.get('state')
     current_user.pincode = request.form.get('pincode')
-    
+
     db.session.commit()
     flash('Profile updated successfully!', 'success')
     return redirect(url_for('profile'))
@@ -812,7 +812,7 @@ def update_profile():
 def manage_addresses():
     if not current_user.is_authenticated:
         return jsonify({'success': False, 'message': 'Please login first'})
-    
+
     if request.method == 'POST':
         return add_address()
     else:
@@ -828,19 +828,19 @@ def get_addresses():
 def add_address():
     try:
         data = request.form
-        
+
         # Validate required fields
         required_fields = ['label', 'full_name', 'phone', 'address_line1', 'city', 'state', 'pincode']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'success': False, 'message': f'{field.replace("_", " ").title()} is required'})
-        
+
         # If this is set as default, unset other defaults
         is_default = data.get('is_default') == 'on'
         if is_default:
             Address.query.filter_by(user_id=current_user.id, is_default=True).update({'is_default': False})
             db.session.commit()
-        
+
         # Create new address
         address = Address(
             user_id=current_user.id,
@@ -854,16 +854,16 @@ def add_address():
             pincode=data['pincode'],
             is_default=is_default or not current_user.addresses.first()  # Set as default if first address
         )
-        
+
         db.session.add(address)
         db.session.commit()
-        
+
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': 'Address added successfully',
             'address': address.to_dict()
         })
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Error saving address: {str(e)}'})
@@ -872,11 +872,11 @@ def add_address():
 def manage_address(address_id):
     if not current_user.is_authenticated:
         return jsonify({'success': False, 'message': 'Please login first'})
-    
+
     address = Address.query.filter_by(id=address_id, user_id=current_user.id).first()
     if not address:
         return jsonify({'success': False, 'message': 'Address not found'})
-    
+
     if request.method == 'GET':
         return jsonify({'success': True, 'address': address.to_dict()})
     elif request.method == 'PUT':
@@ -887,18 +887,18 @@ def manage_address(address_id):
 def update_address(address):
     try:
         data = request.form
-        
+
         # Validate required fields
         required_fields = ['label', 'full_name', 'phone', 'address_line1', 'city', 'state', 'pincode']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'success': False, 'message': f'{field.replace("_", " ").title()} is required'})
-        
+
         # If this is set as default, unset other defaults
         is_default = data.get('is_default') == 'on'
         if is_default:
             Address.query.filter_by(user_id=current_user.id, is_default=True).update({'is_default': False})
-        
+
         # Update address
         address.label = data['label']
         address.full_name = data['full_name']
@@ -909,15 +909,15 @@ def update_address(address):
         address.state = data['state']
         address.pincode = data['pincode']
         address.is_default = is_default
-        
+
         db.session.commit()
-        
+
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': 'Address updated successfully',
             'address': address.to_dict()
         })
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Error updating address: {str(e)}'})
@@ -925,19 +925,19 @@ def update_address(address):
 def delete_address(address):
     try:
         was_default = address.is_default
-        
+
         db.session.delete(address)
         db.session.commit()
-        
+
         # If we deleted the default address, set a new default
         if was_default:
             new_default = Address.query.filter_by(user_id=current_user.id).first()
             if new_default:
                 new_default.is_default = True
                 db.session.commit()
-        
+
         return jsonify({'success': True, 'message': 'Address deleted successfully'})
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Error deleting address: {str(e)}'})
@@ -946,21 +946,21 @@ def delete_address(address):
 def set_default_address(address_id):
     if not current_user.is_authenticated:
         return jsonify({'success': False, 'message': 'Please login first'})
-    
+
     try:
         address = Address.query.filter_by(id=address_id, user_id=current_user.id).first()
         if not address:
             return jsonify({'success': False, 'message': 'Address not found'})
-        
+
         # Unset current default
         Address.query.filter_by(user_id=current_user.id, is_default=True).update({'is_default': False})
-        
+
         # Set new default
         address.is_default = True
         db.session.commit()
-        
+
         return jsonify({'success': True, 'message': 'Default address updated successfully'})
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Error setting default address: {str(e)}'})
@@ -974,7 +974,7 @@ def cart():
         return render_template('main/cart.html', cart_items=cart_items, **totals)
     else:
         return render_template('main/cart.html', cart_items=[], subtotal=0, shipping=0, tax=0, grand_total=0)
-    
+
 @app.route('/checkout', methods=['GET', 'POST'])
 @login_required
 def checkout():
@@ -982,22 +982,22 @@ def checkout():
     if not cart_items:
         flash('Your cart is empty!', 'warning')
         return redirect(url_for('cart'))
-    
+
     totals = calculate_totals(cart_items)
-    
+
     if request.method == 'POST':
         # Create order
         order_id = generate_order_id()
         shipping_address = f"{current_user.full_name}\n{current_user.address}\n{current_user.city}, {current_user.state} - {current_user.pincode}"
-        
+
         payment_method = request.form.get('payment_method', 'card')
-        
+
         # Set payment status based on payment method
         if payment_method == 'cod':
             payment_status = 'pending'  # For COD, payment is pending until delivery
         else:
             payment_status = 'completed'  # For card/UPI, assume payment is completed
-        
+
         order = Order(
             order_id=order_id,
             user_id=current_user.id,
@@ -1007,7 +1007,7 @@ def checkout():
             payment_status=payment_status
         )
         db.session.add(order)
-        
+
         # Add order items
         for cart_item in cart_items:
             order_item = OrderItem(
@@ -1017,20 +1017,20 @@ def checkout():
                 price=cart_item.product.discounted_price or cart_item.product.price
             )
             db.session.add(order_item)
-        
+
         # Clear cart
         Cart.query.filter_by(user_id=current_user.id).delete()
         db.session.commit()
-        
+
         return redirect(url_for('order_confirmation', order_id=order.id))
-    
+
     return render_template('main/checkout.html', cart_items=cart_items, **totals)
 
 @app.route('/update_cart/<int:cart_id>', methods=['POST'])
 @login_required
 def update_cart(cart_id):
     print(f"🔍 UPDATE_CART ROUTE CALLED: cart_id={cart_id}, user_id={current_user.id}")
-    
+
     try:
         cart_item = Cart.query.get(cart_id)
         if not cart_item:
@@ -1049,11 +1049,11 @@ def update_cart(cart_id):
             print(f"🗑️ Removing cart item {cart_id}")
             db.session.delete(cart_item)
             db.session.commit()
-            
+
             cart_count = Cart.query.filter_by(user_id=current_user.id).count()
             cart_items = Cart.query.filter_by(user_id=current_user.id).all()
             totals = calculate_totals(cart_items)
-            
+
             print(f"✅ Successfully removed cart item {cart_id}")
             return jsonify({
                 'success': True,
@@ -1061,33 +1061,33 @@ def update_cart(cart_id):
                 'cart_count': cart_count,
                 'totals': totals
             })
-        
+
         elif action == 'move_to_wishlist':
             product_id = request.form.get('product_id')
             print(f"❤️ Moving cart item {cart_id} to wishlist, product_id: {product_id}")
-            
+
             # Check if already in wishlist
             existing_wishlist = Wishlist.query.filter_by(
-                user_id=current_user.id, 
+                user_id=current_user.id,
                 product_id=product_id
             ).first()
-            
+
             if not existing_wishlist:
                 # Add to wishlist
                 wishlist_item = Wishlist(
-                    user_id=current_user.id, 
+                    user_id=current_user.id,
                     product_id=product_id
                 )
                 db.session.add(wishlist_item)
-            
+
             # Remove from cart
             db.session.delete(cart_item)
             db.session.commit()
-            
+
             cart_count = Cart.query.filter_by(user_id=current_user.id).count()
             cart_items = Cart.query.filter_by(user_id=current_user.id).all()
             totals = calculate_totals(cart_items)
-            
+
             print(f"✅ Successfully moved cart item {cart_id} to wishlist")
             return jsonify({
                 'success': True,
@@ -1109,21 +1109,21 @@ def update_cart(cart_id):
 @login_required
 def cancel_order(order_id):
     order = Order.query.get_or_404(order_id)
-    
+
     # Check if user owns the order
     if order.user_id != current_user.id:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': False, 'message': 'Unauthorized!'}), 403
         flash('Unauthorized!', 'danger')
         return redirect(url_for('index'))
-    
+
     # Check if order can be cancelled
     if not order.can_cancel():
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': False, 'message': 'This order cannot be cancelled.'})
         flash('This order cannot be cancelled.', 'warning')
         return redirect(url_for('profile'))
-    
+
     # Cancel the order
     if order.cancel_order():
         db.session.commit()  # Ensure changes are saved
@@ -1134,7 +1134,7 @@ def cancel_order(order_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': False, 'message': 'Failed to cancel order.'})
         flash('Failed to cancel order.', 'danger')
-    
+
     return redirect(url_for('profile'))
 
 @app.route('/order/<int:order_id>')
@@ -1142,12 +1142,12 @@ def cancel_order(order_id):
 def order_details(order_id):
     """Display order details"""
     order = Order.query.get_or_404(order_id)
-    
+
     # Check if user owns the order
     if order.user_id != current_user.id:
         flash('Unauthorized!', 'danger')
         return redirect(url_for('index'))
-    
+
     return render_template('main/order_details.html', order=order)
 
 @app.route('/track_order', methods=['GET', 'POST'])
@@ -1155,12 +1155,12 @@ def track_order():
     if request.method == 'POST':
         order_id = request.form.get('order_id')
         order = Order.query.filter_by(order_id=order_id).first()
-        
+
         if order:
             return render_template('main/track_order.html', order=order, searched=True)
         else:
             flash('Order not found!', 'danger')
-    
+
     return render_template('main/track_order.html', searched=False)
 
 @app.route('/order_confirmation/<int:order_id>')
@@ -1168,17 +1168,17 @@ def track_order():
 def order_confirmation(order_id):
     """Display order confirmation page"""
     order = Order.query.get_or_404(order_id)
-    
+
     # Check if user owns the order
     if order.user_id != current_user.id:
         flash('Unauthorized!', 'danger')
         return redirect(url_for('index'))
-    
+
     # Calculate estimated delivery date
     estimated_delivery = datetime.now() + timedelta(days=3)
-    
-    return render_template('main/order_confirmation.html', 
-                         order=order, 
+
+    return render_template('main/order_confirmation.html',
+                         order=order,
                          estimated_delivery=estimated_delivery)
 
 @app.route('/api/recommended-products')
@@ -1186,14 +1186,14 @@ def order_confirmation(order_id):
 def recommended_products():
     """Get recommended products based on current order"""
     order_id = request.args.get('order_id')
-    
+
     # Get current order categories
     if order_id:
         order = Order.query.get(order_id)
         if order and order.user_id == current_user.id:
             # Get categories from ordered products
             category_ids = [item.product.category_id for item in order.items if item.product]
-            
+
             if category_ids:
                 # Get products from same categories
                 recommended = Product.query.filter(
@@ -1201,7 +1201,7 @@ def recommended_products():
                     Product.is_active == True,
                     Product.id.notin_([item.product_id for item in order.items])
                 ).limit(4).all()
-                
+
                 products = []
                 for product in recommended:
                     products.append({
@@ -1210,9 +1210,9 @@ def recommended_products():
                         'price': format_currency(product.discounted_price or product.price),
                         'image_url': product.image_url or url_for('static', filename='images/placeholder.jpg')
                     })
-                
+
                 return jsonify(products)
-    
+
     # Fallback to random products
     fallback_products = Product.query.filter_by(is_active=True).order_by(func.random()).limit(4).all()
     products = []
@@ -1223,7 +1223,7 @@ def recommended_products():
             'price': format_currency(product.discounted_price or product.price),
             'image_url': product.image_url or url_for('static', filename='images/placeholder.jpg')
         })
-    
+
     return jsonify(products)
 
 @app.route('/print_receipt/<int:order_id>')
@@ -1233,8 +1233,8 @@ def print_receipt(order_id):
     if order.user_id != current_user.id:
         flash('Unauthorized!', 'danger')
         return redirect(url_for('index'))
-    
-    return render_template('receipts/invoice.html', 
+
+    return render_template('receipts/invoice.html',
                          order=order,
                          current_user=current_user,
                          format_currency=format_currency)
@@ -1245,7 +1245,7 @@ def calculate_totals(cart_items):
     shipping = 0 if subtotal >= 999 else 50
     tax = 300  # Fixed tax amount as requested
     grand_total = subtotal + shipping + tax
-    
+
     return {
         'subtotal': subtotal,
         'shipping': shipping,
@@ -1266,7 +1266,7 @@ def get_wishlist():
     """Get user's wishlist items"""
     try:
         wishlist_items = Wishlist.query.filter_by(user_id=current_user.id).all()
-        
+
         products = []
         for item in wishlist_items:
             if item.product and item.product.is_active:
@@ -1279,13 +1279,13 @@ def get_wishlist():
                     'discount_percentage': item.product.discount_percentage,
                     'in_stock': item.product.stock_quantity > 0
                 })
-        
+
         return jsonify({
             'success': True,
             'products': products,
             'count': len(products)
         })
-        
+
     except Exception as e:
         print(f"Error fetching wishlist: {str(e)}")
         return jsonify({
@@ -1301,10 +1301,10 @@ def remove_from_wishlist_api(product_id):
     """Remove item from wishlist via API"""
     try:
         wishlist_item = Wishlist.query.filter_by(
-            user_id=current_user.id, 
+            user_id=current_user.id,
             product_id=product_id
         ).first()
-        
+
         if wishlist_item:
             db.session.delete(wishlist_item)
             db.session.commit()
@@ -1317,7 +1317,7 @@ def remove_from_wishlist_api(product_id):
                 'success': False,
                 'message': 'Product not found in wishlist'
             }), 404
-            
+
     except Exception as e:
         db.session.rollback()
         print(f"Error removing from wishlist: {str(e)}")
@@ -1331,13 +1331,13 @@ def remove_from_wishlist_api(product_id):
 def view_invoice(order_id):
     """Display invoice preview page"""
     order = Order.query.get_or_404(order_id)
-    
+
     # Check if user owns the order
     if order.user_id != current_user.id:
         flash('Unauthorized!', 'danger')
         return redirect(url_for('index'))
-    
-    return render_template('receipts/invoice.html', 
+
+    return render_template('receipts/invoice.html',
                          order=order,
                          current_user=current_user,
                          format_currency=format_currency,
@@ -1349,49 +1349,49 @@ def download_invoice(order_id):
     """Generate and download invoice as PDF using HTML template"""
     try:
         order = Order.query.get_or_404(order_id)
-        
+
         # Check if user owns the order
         if order.user_id != current_user.id:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return jsonify({'success': False, 'message': 'Unauthorized!'}), 403
             flash('Unauthorized!', 'danger')
             return redirect(url_for('index'))
-        
+
         # Render HTML template with all required context
-        html_content = render_template('receipts/invoice.html', 
+        html_content = render_template('receipts/invoice.html',
                                      order=order,
                                      current_user=current_user,
                                      format_currency=format_currency,
                                      timedelta=timedelta)
-        
+
         # Create PDF from HTML
         pdf = HTML(string=html_content).write_pdf()
-        
+
         # Create response
         response = make_response(pdf)
         response.headers['Content-Type'] = 'application/pdf'
         response.headers['Content-Disposition'] = f'attachment; filename=nexamart-invoice-{order.order_id}.pdf'
-        
+
         return response
-        
+
     except Exception as e:
         logger.error(f"Error generating PDF invoice: {str(e)}")
-        
+
         # Fallback: Redirect to HTML invoice page
         flash('Error generating PDF. Showing HTML version instead.', 'warning')
         return redirect(url_for('view_invoice', order_id=order_id))
-    
+
 @app.route('/api/generate-qr/<int:order_id>')
 @login_required
 def generate_qr_code(order_id):
     """Generate QR code for order details"""
     try:
         order = Order.query.get_or_404(order_id)
-        
+
         # Check if user owns the order
         if order.user_id != current_user.id:
             return jsonify({'success': False, 'message': 'Unauthorized!'}), 403
-        
+
         # Create QR code data
         qr_data = {
             "merchant": "NexaMart",
@@ -1404,10 +1404,10 @@ def generate_qr_code(order_id):
             "customer_email": current_user.email,
             "verification_url": f"{request.host_url}verify-order/{order.order_id}"
         }
-        
+
         # Convert to JSON string
         qr_text = json.dumps(qr_data, indent=2)
-        
+
         # Generate QR code
         qr = qrcode.QRCode(
             version=1,
@@ -1417,17 +1417,17 @@ def generate_qr_code(order_id):
         )
         qr.add_data(qr_text)
         qr.make(fit=True)
-        
+
         # Create QR code image
         img = qr.make_image(fill_color="#001f3f", back_color="white")
-        
+
         # Save to bytes buffer
         buffer = io.BytesIO()
         img.save(buffer, format='PNG')
         buffer.seek(0)
-        
+
         return send_file(buffer, mimetype='image/png', as_attachment=False)
-        
+
     except Exception as e:
         print(f"QR Generation Error: {str(e)}")
         return jsonify({'success': False, 'message': 'Failed to generate QR code'}), 500
@@ -1438,10 +1438,10 @@ def get_qr_data(order_id):
     """Get QR code data for JavaScript generation"""
     try:
         order = Order.query.get_or_404(order_id)
-        
+
         if order.user_id != current_user.id:
             return jsonify({'success': False, 'message': 'Unauthorized!'}), 403
-        
+
         qr_data = {
             "merchant": "NexaMart",
             "order_id": order.order_id,
@@ -1460,9 +1460,9 @@ def get_qr_data(order_id):
             ],
             "verification_url": f"{request.host_url}verify-order/{order.order_id}"
         }
-        
+
         return jsonify({'success': True, 'qr_data': qr_data})
-        
+
     except Exception as e:
         print(f"QR Data Error: {str(e)}")
         return jsonify({'success': False, 'message': 'Failed to get QR data'}), 500
@@ -1471,10 +1471,10 @@ def get_qr_data(order_id):
 def verify_order(order_id):
     """Public endpoint to verify order using QR code"""
     order = Order.query.filter_by(order_id=order_id).first()
-    
+
     if not order:
         return render_template('errors/order_not_found.html'), 404
-    
+
     return render_template('main/order_verification.html', order=order)
 
 @app.route('/api/download-qr/<int:order_id>')
@@ -1483,10 +1483,10 @@ def download_qr_code(order_id):
     """Download QR code as PNG file"""
     try:
         order = Order.query.get_or_404(order_id)
-        
+
         if order.user_id != current_user.id:
             return jsonify({'success': False, 'message': 'Unauthorized!'}), 403
-        
+
         # Generate QR code
         qr_data = {
             "order_id": order.order_id,
@@ -1494,7 +1494,7 @@ def download_qr_code(order_id):
             "date": order.created_at.strftime('%Y-%m-%d'),
             "status": order.status
         }
-        
+
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -1503,24 +1503,24 @@ def download_qr_code(order_id):
         )
         qr.add_data(json.dumps(qr_data))
         qr.make(fit=True)
-        
+
         img = qr.make_image(fill_color="#001f3f", back_color="white")
-        
+
         buffer = io.BytesIO()
         img.save(buffer, format='PNG')
         buffer.seek(0)
-        
+
         return send_file(
             buffer,
             mimetype='image/png',
             as_attachment=True,
             download_name=f'nexamart-order-{order.order_id}-qrcode.png'
         )
-        
+
     except Exception as e:
         print(f"Download QR Error: {str(e)}")
         return jsonify({'success': False, 'message': 'Failed to download QR code'}), 500
-    
+
 @app.route('/debug_cart')
 @login_required
 def debug_cart():
@@ -1587,17 +1587,17 @@ def utility_processor():
 def payment(order_id):
     # Get cart items and calculate totals
     cart_items = Cart.query.filter_by(user_id=current_user.id).all()
-    
+
     if not cart_items:
         flash('Your cart is empty', 'warning')
         return redirect(url_for('cart'))
-    
+
     subtotal = sum((item.product.discounted_price or item.product.price) * item.quantity for item in cart_items)
     shipping = 50  # Fixed shipping cost
     tax = subtotal * 0.18  # 18% GST
     grand_total = subtotal + shipping + tax
-    
-    return render_template('main/payments.html', 
+
+    return render_template('main/payments.html',
                          cart_items=cart_items,
                          subtotal=subtotal,
                          shipping=shipping,
@@ -1614,69 +1614,52 @@ def handle_payment():
         if not cart_items:
             flash('Your cart is empty!', 'warning')
             return redirect(url_for('cart'))
-        
+
         totals = calculate_totals(cart_items)
-        
-        # Get payment method and details
+
+        # Get payment method
         payment_method = request.form.get('payment_method', 'card')
-        card_number = request.form.get('card_number', '').replace(' ', '')
-        
-        # Mock payment validation based on test card numbers
-        if payment_method == 'card':
-            if card_number == '4222222222222222':
-                flash('Payment failed. Please try with a different card.', 'danger')
-                return redirect(url_for('payment'))
-            elif card_number == '4333333333333333':
-                flash('Payment is pending. Please check your email for confirmation.', 'warning')
-                return redirect(url_for('payment'))
-        
+
         # Create order
         order_id = generate_order_id()
         shipping_address = f"{current_user.full_name}\n{current_user.address}\n{current_user.city}, {current_user.state} - {current_user.pincode}"
-        
+
         # Set payment status based on payment method
         if payment_method == 'cod':
             payment_status = 'pending'  # For COD, payment is pending until delivery
         else:
             payment_status = 'completed'  # For card/UPI, assume payment is completed
-        
-        # Create order object
+
         order = Order(
             order_id=order_id,
             user_id=current_user.id,
             total_amount=totals['grand_total'],
             shipping_address=shipping_address,
             payment_method=payment_method,
-            payment_status=payment_status,
-            status='confirmed'
+            payment_status=payment_status
         )
         db.session.add(order)
-        db.session.flush()  # This assigns an ID to the order without committing
-        
+
         # Add order items
         for cart_item in cart_items:
             order_item = OrderItem(
-                order_id=order.id,
+                order=order,
                 product_id=cart_item.product_id,
                 quantity=cart_item.quantity,
                 price=cart_item.product.discounted_price or cart_item.product.price
             )
             db.session.add(order_item)
-        
+
         # Clear cart
         Cart.query.filter_by(user_id=current_user.id).delete()
-        
-        # Commit all changes
         db.session.commit()
-        
+
         flash('Payment successful! Your order has been placed.', 'success')
         return redirect(url_for('order_confirmation', order_id=order.id))
-        
+
     except Exception as e:
         db.session.rollback()
         print(f"Payment error: {str(e)}")
-        import traceback
-        traceback.print_exc()
         flash('Payment failed. Please try again.', 'danger')
         return redirect(url_for('payment'))
 

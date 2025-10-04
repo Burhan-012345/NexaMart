@@ -1665,23 +1665,22 @@ def handle_payment():
 
 @app.route('/help-center')
 def help_center():
-    """Help center page"""
     return render_template('services/help.html')
 
-@app.route('/returns-policy')
-def returns_policy():  # Endpoint: 'returns_policy'
+@app.route('/returns-refunds')
+def returns_refunds():
     return render_template('services/returns.html')
 
 @app.route('/shipping-info')
-def shipping_info():  # Endpoint: 'shipping_info'
+def shipping_info():
     return render_template('services/shipping.html')
 
 @app.route('/shopping-guide')
-def shopping_guide():  # Endpoint: 'shopping_guide'
+def shopping_guide():
     return render_template('services/guide.html')
 
 @app.route('/faqs')
-def faqs():  # Endpoint: 'faqs'
+def faqs():
     return render_template('services/FAQ.html')
 
 # Initialize database

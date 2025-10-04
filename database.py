@@ -126,21 +126,21 @@ def init_db():
         [
             Product(name="Car Vacuum Cleaner", description="Portable car vacuum cleaner", price=1999.00, discounted_price=1599.00, image_url="/static/images/car_cleaner.jpeg", category_id=8, stock_quantity=70),
             Product(name="Car Phone Holder", description="Universal car phone mount", price=499.00, discounted_price=399.00, image_url="/static/images/holder.jpeg", category_id=8, stock_quantity=200),
-            Product(name="Car Air Freshener", description="Long-lasting car air freshener", price=299.00, discounted_price=199.00, image_url="/static/images/freshener.jpeg", category_id=8, stock_quantity=300),
+            Product(name="Car Air Freshener", description="Long-lasting car air freshener", price=299.00, discounted_price=199.00, image_url="/static/images/freshner.jpeg", category_id=8, stock_quantity=300),
             Product(name="Jump Starter", description="Portable car jump starter", price=5999.00, discounted_price=4999.00, image_url="/static/images/starter.jpeg", category_id=8, stock_quantity=35),
             Product(name="Car Cover", description="Universal waterproof car cover", price=2499.00, discounted_price=1999.00, image_url="/static/images/cover.jpeg", category_id=8, stock_quantity=45),
             Product(name="Tyre Inflator", description="Digital tyre inflator with pressure gauge", price=1799.00, discounted_price=1499.00, image_url="/static/images/inflator.jpeg", category_id=8, stock_quantity=60),
-            Product(name="Car Seat Covers", description="Premium fabric car seat covers", price=3999.00, discounted_price=3499.00, image_url="/static/images/seat_covers.jpeg", category_id=8, stock_quantity=40),
+            Product(name="Car Seat Covers", description="Premium fabric car seat covers", price=3999.00, discounted_price=3499.00, image_url="/static/images/seat_cover.jpeg", category_id=8, stock_quantity=40),
             Product(name="Car Wash Kit", description="Complete car washing kit", price=1499.00, discounted_price=1199.00, image_url="/static/images/wash_kit.jpeg", category_id=8, stock_quantity=85),
             Product(name="Dash Cam", description="HD dashboard camera with night vision", price=4999.00, discounted_price=4499.00, image_url="/static/images/dash_cam.jpeg", category_id=8, stock_quantity=55),
-            Product(name="Car Organizer", description="Backseat car organizer for kids", price=899.00, discounted_price=699.00, image_url="/static/images/organizer.jpeg", category_id=8, stock_quantity=90)
+            Product(name="Car Organizer", description="Backseat car organizer for kids", price=899.00, discounted_price=699.00, image_url="/static/images/organizor.jpeg", category_id=8, stock_quantity=90)
         ],
         
         # Jewelry (10 items)
         [
             Product(name="Gold Plated Necklace", description="Elegant gold plated necklace", price=2999.00, discounted_price=2499.00, image_url="/static/images/necklace.jpeg", category_id=9, stock_quantity=50),
             Product(name="Silver Bracelet", description="Sterling silver bracelet with stones", price=1999.00, discounted_price=1599.00, image_url="/static/images/bracelet.jpeg", category_id=9, stock_quantity=65),
-            Product(name="Diamond Earrings", description="Sparkling diamond stud earrings", price=8999.00, discounted_price=7999.00, image_url="/static/images/earrings.jpeg", category_id=9, stock_quantity=25),
+            Product(name="Diamond Earrings", description="Sparkling diamond stud earrings", price=8999.00, discounted_price=7999.00, image_url="/static/images/earring.jpeg", category_id=9, stock_quantity=25),
             Product(name="Smart Watch", description="Fitness tracking smartwatch", price=5999.00, discounted_price=4999.00, image_url="/static/images/smart_watch.jpeg", category_id=9, stock_quantity=80),
             Product(name="Pearl Set", description="Elegant pearl necklace and earrings set", price=4999.00, discounted_price=4499.00, image_url="/static/images/pearl_set.jpeg", category_id=9, stock_quantity=35),
             Product(name="Men's Watch", description="Luxury men's wristwatch", price=6999.00, discounted_price=5999.00, image_url="/static/images/mens_watch.jpeg", category_id=9, stock_quantity=45),
